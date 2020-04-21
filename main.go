@@ -1,19 +1,26 @@
 package main
 
+import (
+	"log"
+	"os"
+
+	"github.com/urfave/cli/v2"
+)
+
 func main() {
-	// app := &cli.App{
-	// 	Commands: []*cli.Command{
-	// 		UpCommand,
-	// 		DownCommand,
-	// 	},
-	// }
+	log.SetFlags(0)
 
-	// app.EnableBashCompletion = true
+	app := &cli.App{
+		Commands: []*cli.Command{
+			UpCommand,
+			DownCommand,
+		},
+	}
 
-	// err := app.Run(os.Args)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	app.EnableBashCompletion = true
 
-	testBox()
+	err := app.Run(os.Args)
+	if err != nil {
+		log.Fatal(err)
+	}
 }

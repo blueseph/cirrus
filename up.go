@@ -1,7 +1,10 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"io/ioutil"
+	"time"
 
 	"github.com/urfave/cli/v2"
 )
@@ -44,6 +47,51 @@ func upAction(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+// Up manages the CloudFormation stack creation lifecycle
+func Up(stackName string, template []byte) error {
+	err := verifyAWSCredentials()
+	if err != nil {
+		return err
+	}
+
+	changeSetID := stackName + "-" + fmt.Sprint(time.Now().Unix())
+	exists, err := determineIfStackExists(stackName)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(STATUS + "Creating change set...")
+	changeSet, err := createChanges(stackName, changeSetID, template, exists)
+	if err != nil {
+		return err
+	}
+
+	operation := create
+	if exists {
+		operation = update
+	}
+
+	verification, err := displayChanges(stackName, changeSet, operation)
+	if err != nil {
+		return err
+	}
+	if !verification {
+		return errors.New("User declined change set")
+	}
+
+	// err = executeChangeSet(stackName, changeSetID)
+	// if err != nil {
+	// 	return err
+	// }
+
+	// err = watchStackEvents(changeSet, operation)
+	// if err != nil {
+	// 	return err
+	// }
 
 	return nil
 }

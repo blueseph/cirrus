@@ -3,20 +3,26 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws/external"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 )
 
-var cfnClient *cloudformation.Client
+var (
+	cfnClient      *cloudformation.Client
+	changeSetASCII map[cloudformation.ChangeAction]string = map[cloudformation.ChangeAction]string{
+		cloudformation.ChangeActionAdd:    "+",
+		cloudformation.ChangeActionRemove: "-",
+		cloudformation.ChangeActionModify: "↻",
+	}
+)
 
 type stackOperation string
 
 const (
-	stackNotFound string = "does not exist"
+	stackNotFound   string = "does not exist"
+	unknownEndpoint string = "unknown endpoint, could not resolve endpoint"
 
 	update stackOperation = "update"
 	create stackOperation = "create"
@@ -27,69 +33,13 @@ func getClient() *cloudformation.Client {
 	if cfnClient == nil {
 		cfg, err := external.LoadDefaultAWSConfig()
 		if err != nil {
-			panic("unable to load SDK config, " + err.Error())
+			panic(ERROR + "unable to load SDK config, " + err.Error())
 		}
 
 		cfnClient = cloudformation.New(cfg)
 	}
 
 	return cfnClient
-}
-
-// Up manages the CloudFormation stack creation lifecycle
-func Up(stackName string, template []byte) error {
-
-	changeSetID := stackName + "-" + fmt.Sprint(time.Now().Unix())
-	exists, err := determineIfStackExists(stackName)
-	if err != nil {
-		return err
-	}
-
-	changeSet, err := createChanges(stackName, changeSetID, template, exists)
-	if err != nil {
-		return err
-	}
-
-	operation := create
-	if exists {
-		operation = update
-	}
-
-	verification, err := displayChanges(stackName, changeSet, operation)
-	if err != nil {
-		return err
-	}
-	if !verification {
-		return errors.New("User declined change set")
-	}
-
-	err = executeChangeSet(stackName, changeSetID)
-	if err != nil {
-		return err
-	}
-
-	// err = watchStackEvents(changeSet, operation)
-	// if err != nil {
-	// 	return err
-	// }
-
-	return nil
-}
-
-// Down manages the stack deletion lifecycle
-func Down(stackName string) error {
-	// operation := delete
-	err := deleteStack(stackName)
-	if err != nil {
-		return err
-	}
-
-	// err = watchStackEvents(stackId, operation)
-	// if err != nil {
-	// 	return err
-	// }
-
-	return nil
 }
 
 func createChanges(stackName string, changeSetID string, template []byte, exists bool) (*cloudformation.DescribeChangeSetResponse, error) {
@@ -249,4 +199,33 @@ func deleteStack(stackName string) error {
 	}
 
 	return nil
+}
+
+// we essentially call a list stack to verify credentials are correctly set up
+func verifyAWSCredentials() error {
+	input := cloudformation.ListStacksInput{}
+
+	client := getClient()
+
+	req := client.ListStacksRequest(&input)
+
+	_, err := req.Send(context.Background())
+	if err != nil {
+		err = handleCredentialsError(err)
+
+		return err
+	}
+
+	return nil
+}
+
+func handleCredentialsError(err error) error {
+	strErr := err.Error()
+	var msg string
+
+	if strings.Contains(strErr, unknownEndpoint) {
+		msg = ERROR + "Unable to verify AWS credentials. Ensure your configuration is correct. \n \n" + DOCS + "https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html"
+	}
+
+	return errors.New(msg)
 }

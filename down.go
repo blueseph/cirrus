@@ -11,7 +11,7 @@ var downFlags = []cli.Flag{
 	},
 }
 
-// UpCommand returns the CLI construct that destroys a CloudFormation stack and watches events
+// DownCommand returns the CLI construct that destroys a CloudFormation stack and watches events
 var DownCommand = &cli.Command{
 	Name:   "down",
 	Usage:  "Bring down a CloudFormation template and watch stack events",
@@ -24,6 +24,27 @@ func downAction(c *cli.Context) error {
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+// Down manages the stack deletion lifecycle
+func Down(stackName string) error {
+	err := verifyAWSCredentials()
+	if err != nil {
+		return err
+	}
+
+	// operation := delete
+	err = deleteStack(stackName)
+	if err != nil {
+		return err
+	}
+
+	// err = watchStackEvents(stackId, operation)
+	// if err != nil {
+	// 	return err
+	// }
 
 	return nil
 }
