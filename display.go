@@ -16,6 +16,7 @@ type changeScreenRow struct {
 	Status            string
 	Timestamp         time.Time
 	StatusReason      string
+	Replacement       cloudformation.Replacement
 }
 
 var (
@@ -39,6 +40,7 @@ func changeBuilder(changes []cloudformation.Change, operation stackOperation) ma
 			LogicalResourceID: *change.ResourceChange.LogicalResourceId,
 			ResourceType:      *change.ResourceChange.ResourceType,
 			Status:            string(status),
+			Replacement:       change.ResourceChange.Replacement,
 		}
 	}
 
@@ -54,23 +56,20 @@ func titleBarDrawFn(changeSet cloudformation.DescribeChangeSetResponse) func(tce
 	}
 }
 
-func changesDrawFn(changeSet cloudformation.DescribeChangeSetResponse) func(tcell.Screen, int, int, int, int) (int, int, int, int) {
-	return func(screen tcell.Screen, x int, y int, width int, height int) (int, int, int, int) {
-		for i, change := range changeSet.Changes {
-			msg := formatChange(change)
-
-			tview.Print(screen, msg, x+xPadding, y+yPadding+i, width, tview.AlignLeft, tcell.ColorWhite)
-		}
-
-		return 0, 0, 0, 0
+func getChangesString(changes map[string]changeScreenRow) string {
+	var allChanges string
+	for _, change := range changes {
+		msg := formatChange(change)
+		allChanges += msg
 	}
+	return allChanges
 }
 
-func formatChange(change cloudformation.Change) string {
+func formatChange(change changeScreenRow) string {
 	var formatted string
-	replacement := change.ResourceChange.Replacement
+	replacement := change.Replacement
 
-	formatted += "[" + resourceChangeColorize(change.ResourceChange.Action, true) + "] "
+	formatted += "[" + resourceChangeColorize(change.Status, true) + "] "
 	formatted += "[#00b8ea]" + *change.ResourceChange.LogicalResourceId + " [white]"
 	formatted += resourceChangeColorize(change.ResourceChange.Action, false) + " "
 	formatted += resourceTypeFormat(*change.ResourceChange.ResourceType)
@@ -83,7 +82,7 @@ func formatChange(change cloudformation.Change) string {
 		formatted += " [yellow]Replace conditional[white]"
 	}
 
-	return formatted
+	return formatted + "\n"
 }
 
 func showChanges(changes map[string]changeScreenRow, operation stackOperation, changeSet *cloudformation.DescribeChangeSetResponse) (bool, error) {
@@ -97,11 +96,20 @@ func showChanges(changes map[string]changeScreenRow, operation stackOperation, c
 		})
 
 	form.SetButtonsAlign(tview.AlignCenter).SetBorder(true).SetTitle(" Actions ")
-	
+
+	textView := tview.NewTextView().SetRegions(true).SetScrollable(true).SetDynamicColors(true).SetWordWrap(false)
+
+	go func() {
+		msg := getChangesString(changes)
+		fmt.Fprintf(textView, "%s ", msg)
+	}()
+
+	textView.SetBorder(true).SetTitle(" Changes ")
+
 	changeView := tview.NewFlex().
 		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
 			AddItem(tview.NewBox().SetBorder(true).SetTitle(" "+*changeSet.StackName+stackOperationColorize(operation)+" ").SetDrawFunc(titleBarDrawFn(*changeSet)), 5, 0, false).
-			AddItem(tview.NewBox().SetBorder(true).SetTitle(" Changes ").SetDrawFunc(changesDrawFn(*changeSet)), 0, 3, false).
+			AddItem(textView, 0, 3, false).
 			AddItem(form, 5, 0, false),
 			0, 1, false)
 
