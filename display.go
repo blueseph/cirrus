@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
@@ -13,47 +12,64 @@ import (
 type changeScreenRow struct {
 	LogicalResourceID string
 	ResourceType      string
-	Status            string
+	Status            cloudformation.ResourceStatus
 	Timestamp         time.Time
 	StatusReason      string
 	Replacement       cloudformation.Replacement
+	Action            cloudformation.ChangeAction
+}
+
+type stackInfo struct {
+	stackID       string
+	changeSetName string
+	stackName     string
 }
 
 var (
-	xPadding = 3
-	yPadding = 1
+	executeButtonLabel string = "Execute"
+	declineButtonLabel string = "Decline"
 )
 
-func displayChanges(stackName string, changeSet *cloudformation.DescribeChangeSetResponse, operation stackOperation) (bool, error) {
-	changesMap := changeBuilder(changeSet.Changes, operation)
+func displayChanges(stackName string, changeSet *cloudformation.DescribeChangeSetResponse, operation stackOperation) error {
+	changesMap := changeBuilder(changeSet.Changes)
+	info := stackInfo{
+		stackID:       *changeSet.StackId,
+		changeSetName: *changeSet.ChangeSetName,
+		stackName:     *changeSet.StackName,
+	}
 
-	verification, err := showChanges(changesMap, operation, changeSet)
+	err := showChanges(changesMap, operation, info)
 
-	return verification, err
+	return err
 }
 
-func changeBuilder(changes []cloudformation.Change, operation stackOperation) map[string]changeScreenRow {
+func changeBuilder(changes []cloudformation.Change) map[string]changeScreenRow {
 	mapChanges := make(map[string]changeScreenRow)
 	for _, change := range changes {
-		status := operation
 		mapChanges[*change.ResourceChange.LogicalResourceId] = changeScreenRow{
 			LogicalResourceID: *change.ResourceChange.LogicalResourceId,
 			ResourceType:      *change.ResourceChange.ResourceType,
-			Status:            string(status),
 			Replacement:       change.ResourceChange.Replacement,
+			Action:            change.ResourceChange.Action,
 		}
 	}
 
 	return mapChanges
 }
 
-func titleBarDrawFn(changeSet cloudformation.DescribeChangeSetResponse) func(tcell.Screen, int, int, int, int) (int, int, int, int) {
-	return func(screen tcell.Screen, x int, y int, width int, height int) (int, int, int, int) {
-		tview.Print(screen, "[white]Stack:     [white:b]"+*changeSet.StackName, x+xPadding, y+yPadding, width, tview.AlignLeft, tcell.ColorWhite)
-		tview.Print(screen, "[white]Changeset: [white:b]"+*changeSet.ChangeSetName, x+xPadding, y+yPadding+1, width, tview.AlignLeft, tcell.ColorWhite)
-		tview.Print(screen, "[white]Id:        [white:b]"+*changeSet.StackId, x+xPadding, y+yPadding+2, width, tview.AlignLeft, tcell.ColorWhite)
-		return 0, 0, 0, 0
+func eventBuilder(events []cloudformation.StackEvent) map[string]changeScreenRow {
+	mapEvents := make(map[string]changeScreenRow)
+
+	for _, event := range events {
+		mapEvents[*event.LogicalResourceId] = changeScreenRow{
+			LogicalResourceID: *event.LogicalResourceId,
+			ResourceType:      *event.ResourceType,
+			Status:            event.ResourceStatus,
+			Timestamp:         *event.Timestamp,
+		}
 	}
+
+	return mapEvents
 }
 
 func getChangesString(changes map[string]changeScreenRow) string {
@@ -65,38 +81,24 @@ func getChangesString(changes map[string]changeScreenRow) string {
 	return allChanges
 }
 
-func formatChange(change changeScreenRow) string {
-	var formatted string
-	replacement := change.Replacement
+// func formatEvent(change changeScreenRow) string {
+// 	var formatted string
+// 	replacement := change.Replacement
+// }
 
-	formatted += "[" + resourceChangeColorize(change.Status, true) + "] "
-	formatted += "[#00b8ea]" + *change.ResourceChange.LogicalResourceId + " [white]"
-	formatted += resourceChangeColorize(change.ResourceChange.Action, false) + " "
-	formatted += resourceTypeFormat(*change.ResourceChange.ResourceType)
+func createTitleBar(info stackInfo, operation stackOperation) *tview.TextView {
+	textView := tview.NewTextView().SetScrollable(false).SetDynamicColors(true).SetWordWrap(true)
 
-	if replacement == cloudformation.ReplacementTrue {
-		formatted += " [red]Replace[white]"
-	}
+	go func() {
+		fmt.Fprintf(textView, "%s ", getTitleBar(info))
+	}()
 
-	if replacement == cloudformation.ReplacementConditional {
-		formatted += " [yellow]Replace conditional[white]"
-	}
+	textView.SetBorder(true).SetTitle(" " + info.stackName + stackOperationColorize(operation) + " ")
 
-	return formatted + "\n"
+	return textView
 }
 
-func showChanges(changes map[string]changeScreenRow, operation stackOperation, changeSet *cloudformation.DescribeChangeSetResponse) (bool, error) {
-	app := tview.NewApplication()
-
-	form := tview.NewForm().
-		AddButton("Execute change set", nil).
-		AddButton("Decline change set", func() {
-			defer fmt.Println(ERROR + "User declined change set")
-			app.Stop()
-		})
-
-	form.SetButtonsAlign(tview.AlignCenter).SetBorder(true).SetTitle(" Actions ")
-
+func createChangesBox(changes map[string]changeScreenRow) *tview.TextView {
 	textView := tview.NewTextView().SetRegions(true).SetScrollable(true).SetDynamicColors(true).SetWordWrap(false)
 
 	go func() {
@@ -106,59 +108,79 @@ func showChanges(changes map[string]changeScreenRow, operation stackOperation, c
 
 	textView.SetBorder(true).SetTitle(" Changes ")
 
-	changeView := tview.NewFlex().
-		AddItem(tview.NewFlex().SetDirection(tview.FlexRow).
-			AddItem(tview.NewBox().SetBorder(true).SetTitle(" "+*changeSet.StackName+stackOperationColorize(operation)+" ").SetDrawFunc(titleBarDrawFn(*changeSet)), 5, 0, false).
-			AddItem(textView, 0, 3, false).
-			AddItem(form, 5, 0, false),
-			0, 1, false)
+	return textView
+}
 
-	if err := app.SetRoot(changeView, true).SetFocus(form).Run(); err != nil {
+func createActionBar(app *tview.Application) *tview.Form {
+	form := tview.NewForm().
+		AddButton(executeButtonLabel, nil).
+		AddButton(declineButtonLabel, func() {
+			defer fmt.Println(ERROR + "User declined change set")
+			app.Stop()
+		})
+
+	form.SetButtonsAlign(tview.AlignCenter).SetBorder(true).SetTitle(" Actions ")
+
+	return form
+}
+
+func showChanges(changes map[string]changeScreenRow, operation stackOperation, info stackInfo) error {
+	app := tview.NewApplication()
+	titleBar := createTitleBar(info, operation)
+	changesBox := createChangesBox(changes)
+	actionBar := createActionBar(app)
+	// liveBar := createLiveBar
+
+	view := tview.NewFlex().SetDirection(tview.FlexRow).
+		AddItem(titleBar, 5, 0, false).
+		AddItem(changesBox, 0, 3, false).
+		AddItem(actionBar, 5, 0, false)
+
+	// hacky workarounds
+	view.SetInputCapture(func(e *tcell.EventKey) *tcell.EventKey {
+		executeButton := actionBar.GetButton(0)
+		declineButton := actionBar.GetButton(1)
+
+		if e.Key() == tcell.KeyTab {
+			switch {
+			case changesBox.HasFocus():
+				app.SetFocus(executeButton)
+			case actionBar.HasFocus():
+				if executeButton.GetFocusable().HasFocus() {
+					app.SetFocus(declineButton)
+				} else {
+					app.SetFocus(changesBox)
+				}
+			}
+		}
+
+		if e.Key() == tcell.KeyBacktab {
+			switch {
+			case changesBox.HasFocus():
+				app.SetFocus(declineButton)
+			case actionBar.HasFocus():
+				if executeButton.GetFocusable().HasFocus() {
+					app.SetFocus(changesBox)
+				} else {
+					app.SetFocus(executeButton)
+				}
+			}
+		}
+
+		return e
+	})
+
+	app.SetInputCapture(func(e *tcell.EventKey) *tcell.EventKey {
+		if view.HasFocus() {
+			view.GetInputCapture()(e)
+		}
+
+		return e
+	})
+
+	if err := app.SetRoot(view, true).SetFocus(changesBox).Run(); err != nil {
 		panic(err)
 	}
 
-	// fmt.Printf("%+v\n", changeSet)
-
-	return true, nil
-}
-
-func stackOperationColorize(operation stackOperation) string {
-	color := " [green::b]"
-	end := "[-:-:-]"
-
-	if operation == update {
-		color = " [yellow::b]"
-	}
-
-	if operation == delete {
-		color = " [red::b]"
-	}
-
-	return color + strings.ToUpper(string(operation)) + end
-}
-
-func resourceChangeColorize(change cloudformation.ChangeAction, ascii bool) string {
-	color := "[green::b]"
-	end := "[-:-:-]"
-
-	if change == cloudformation.ChangeActionModify {
-		color = "[yellow::b]"
-	}
-
-	if change == cloudformation.ChangeActionRemove {
-		color = "[red::b]"
-	}
-
-	if ascii {
-		return color + changeSetASCII[change] + end
-	}
-
-	return color + strings.ToUpper(string(change)) + end
-}
-
-func resourceTypeFormat(resourceType string) string {
-	replaced := strings.ReplaceAll(resourceType, "::", ".")
-	lowered := strings.ToLower(replaced)
-
-	return "[grey::d]" + lowered + "[-:-:-]"
+	return nil
 }

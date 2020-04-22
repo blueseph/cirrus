@@ -35,13 +35,12 @@ func Down(stackName string) error {
 		return err
 	}
 
-	// operation := delete
 	err = deleteStack(stackName)
 	if err != nil {
 		return err
 	}
 
-	// err = watchStackEvents(stackId, operation)
+	// err = displayDelete(stackId)
 	// if err != nil {
 	// 	return err
 	// }

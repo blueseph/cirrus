@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"time"
@@ -75,13 +74,7 @@ func Up(stackName string, template []byte) error {
 		operation = update
 	}
 
-	verification, err := displayChanges(stackName, changeSet, operation)
-	if err != nil {
-		return err
-	}
-	if !verification {
-		return errors.New("User declined change set")
-	}
+	err = displayChanges(stackName, changeSet, operation)
 
 	// err = executeChangeSet(stackName, changeSetID)
 	// if err != nil {

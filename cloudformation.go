@@ -162,6 +162,7 @@ func getStack(stackName string) (*cloudformation.DescribeStacksResponse, error) 
 	return req.Send(context.Background())
 }
 
+// check for empty (0 resource) stack
 func determineIfStackExists(stackName string) (bool, error) {
 	stack, err := getStack(stackName)
 
@@ -199,6 +200,24 @@ func deleteStack(stackName string) error {
 	}
 
 	return nil
+}
+
+func getEvents(stackName string) (*cloudformation.DescribeStackEventsResponse, error) {
+	input := cloudformation.DescribeStackEventsInput{
+		StackName: &stackName,
+	}
+
+	client := getClient()
+
+	req := client.DescribeStackEventsRequest(&input)
+
+	events, err := req.Send(context.Background())
+
+	if err != nil {
+		return nil, err
+	}
+
+	return events, nil
 }
 
 // we essentially call a list stack to verify credentials are correctly set up
