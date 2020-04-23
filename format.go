@@ -1,5 +1,10 @@
 package main
 
+import (
+	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
+	"strings"
+)
+
 func stackOperationColorize(operation stackOperation) string {
 	color := " [green::b]"
 	end := "[-]"
