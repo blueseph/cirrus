@@ -1,4 +1,4 @@
-package main
+package cfn
 
 import (
 	"context"
@@ -7,33 +7,42 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws/external"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
+	"github.com/blueseph/cirrus/colors"
 )
 
 var (
-	cfnClient      *cloudformation.Client
-	changeSetASCII map[cloudformation.ChangeAction]string = map[cloudformation.ChangeAction]string{
+	cfnClient *cloudformation.Client
+
+	//ChangeSetASCII is a map to convert a change action to a glyph representing the action. + for Add, - for Remove, ↻ for Modify
+	ChangeSetASCII map[cloudformation.ChangeAction]string = map[cloudformation.ChangeAction]string{
 		cloudformation.ChangeActionAdd:    "+",
 		cloudformation.ChangeActionRemove: "-",
 		cloudformation.ChangeActionModify: "↻",
 	}
 )
 
-type stackOperation string
+//StackOperation is the cloudFormation type of stack operations
+type StackOperation string
 
 const (
 	stackNotFound   string = "does not exist"
 	unknownEndpoint string = "unknown endpoint, could not resolve endpoint"
 
-	update stackOperation = "update"
-	create stackOperation = "create"
-	delete stackOperation = "delete"
+	//StackOperationUpdate is the enum value for Stack Operation of update
+	StackOperationUpdate StackOperation = "update"
+
+	//StackOperationCreate is the enum value for Stack Operation of create
+	StackOperationCreate StackOperation = "create"
+
+	//StackOperationDelete is the enum value for Stack Operation of delete
+	StackOperationDelete StackOperation = "delete"
 )
 
 func getClient() *cloudformation.Client {
 	if cfnClient == nil {
 		cfg, err := external.LoadDefaultAWSConfig()
 		if err != nil {
-			panic(ERROR + "unable to load SDK config, " + err.Error())
+			panic(colors.ERROR + "unable to load SDK config, " + err.Error())
 		}
 
 		cfnClient = cloudformation.New(cfg)
@@ -42,7 +51,8 @@ func getClient() *cloudformation.Client {
 	return cfnClient
 }
 
-func createChanges(stackName string, changeSetID string, template []byte, exists bool) (*cloudformation.DescribeChangeSetResponse, error) {
+//CreateChanges creates a change set, waits for it to complete creating, then describes the change set.
+func CreateChanges(stackName string, changeSetID string, template []byte, exists bool) (*cloudformation.DescribeChangeSetResponse, error) {
 	err := createChangeSet(stackName, changeSetID, template, exists)
 	if err != nil {
 		return nil, err
@@ -162,8 +172,8 @@ func getStack(stackName string) (*cloudformation.DescribeStacksResponse, error) 
 	return req.Send(context.Background())
 }
 
-// check for empty (0 resource) stack
-func determineIfStackExists(stackName string) (bool, error) {
+// DetermineIfStackExists pulls a stack via the stackName and determines if it exists. If it is in a "review in progress" state, it counts as not existing
+func DetermineIfStackExists(stackName string) (bool, error) {
 	stack, err := getStack(stackName)
 
 	if err != nil {
@@ -185,7 +195,8 @@ func determineIfStackExists(stackName string) (bool, error) {
 	return exists, nil
 }
 
-func deleteStack(stackName string) error {
+// DeleteStack deletes the stack given a stack name
+func DeleteStack(stackName string) error {
 	input := cloudformation.DeleteStackInput{
 		StackName: &stackName,
 	}
@@ -220,8 +231,8 @@ func getEvents(stackName string) (*cloudformation.DescribeStackEventsResponse, e
 	return events, nil
 }
 
-// we essentially call a list stack to verify credentials are correctly set up
-func verifyAWSCredentials() error {
+// VerifyAWSCredentials verifies AWS credentials are properly configured by running a List Stack command and analyzing errors for common issues with credentials
+func VerifyAWSCredentials() error {
 	input := cloudformation.ListStacksInput{}
 
 	client := getClient()
@@ -243,7 +254,7 @@ func handleCredentialsError(err error) error {
 	var msg string
 
 	if strings.Contains(strErr, unknownEndpoint) {
-		msg = ERROR + "Unable to verify AWS credentials. Ensure your configuration is correct. \n \n" + DOCS + "https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html"
+		msg = colors.ERROR + "Unable to verify AWS credentials. Ensure your configuration is correct. \n \n" + colors.DOCS + "https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html"
 	}
 
 	return errors.New(msg)

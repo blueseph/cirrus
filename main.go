@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/blueseph/cirrus/cmd"
 	"github.com/urfave/cli/v2"
 )
 
@@ -12,8 +13,8 @@ func main() {
 
 	app := &cli.App{
 		Commands: []*cli.Command{
-			UpCommand,
-			DownCommand,
+			cmd.UpCommand,
+			cmd.DownCommand,
 		},
 	}
 

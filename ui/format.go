@@ -1,19 +1,21 @@
-package main
+package ui
 
 import (
-	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"strings"
+
+	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
+	"github.com/blueseph/cirrus/cfn"
 )
 
-func stackOperationColorize(operation stackOperation) string {
+func stackOperationColorize(operation cfn.StackOperation) string {
 	color := " [green::b]"
 	end := "[-]"
 
-	if operation == update {
+	if operation == cfn.StackOperationUpdate {
 		color = " [yellow::b]"
 	}
 
-	if operation == delete {
+	if operation == cfn.StackOperationDelete {
 		color = " [red::b]"
 	}
 
@@ -33,7 +35,7 @@ func resourceChangeColorize(change cloudformation.ChangeAction, ascii bool) stri
 	}
 
 	if ascii {
-		return color + changeSetASCII[change] + end
+		return color + cfn.ChangeSetASCII[change] + end
 	}
 
 	return color + strings.ToUpper(string(change)) + end

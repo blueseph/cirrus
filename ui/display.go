@@ -1,10 +1,12 @@
-package main
+package ui
 
 import (
 	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
+	"github.com/blueseph/cirrus/cfn"
+	"github.com/blueseph/cirrus/colors"
 	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
 )
@@ -30,7 +32,8 @@ var (
 	declineButtonLabel string = "Decline"
 )
 
-func displayChanges(stackName string, changeSet *cloudformation.DescribeChangeSetResponse, operation stackOperation) error {
+//DisplayChanges shows the change set in a graphic interface and waits for response. Cancels the command if the user declines, or executes and tails the events log
+func DisplayChanges(stackName string, changeSet *cloudformation.DescribeChangeSetResponse, operation cfn.StackOperation) error {
 	changesMap := changeBuilder(changeSet.Changes)
 	info := stackInfo{
 		stackID:       *changeSet.StackId,
@@ -86,7 +89,7 @@ func getChangesString(changes map[string]changeScreenRow) string {
 // 	replacement := change.Replacement
 // }
 
-func createTitleBar(info stackInfo, operation stackOperation) *tview.TextView {
+func createTitleBar(info stackInfo, operation cfn.StackOperation) *tview.TextView {
 	textView := tview.NewTextView().SetScrollable(false).SetDynamicColors(true).SetWordWrap(true)
 
 	go func() {
@@ -115,7 +118,7 @@ func createActionBar(app *tview.Application) *tview.Form {
 	form := tview.NewForm().
 		AddButton(executeButtonLabel, nil).
 		AddButton(declineButtonLabel, func() {
-			defer fmt.Println(ERROR + "User declined change set")
+			defer fmt.Println(colors.ERROR + "User declined change set")
 			app.Stop()
 		})
 
@@ -124,7 +127,7 @@ func createActionBar(app *tview.Application) *tview.Form {
 	return form
 }
 
-func showChanges(changes map[string]changeScreenRow, operation stackOperation, info stackInfo) error {
+func showChanges(changes map[string]changeScreenRow, operation cfn.StackOperation, info stackInfo) error {
 	app := tview.NewApplication()
 	titleBar := createTitleBar(info, operation)
 	changesBox := createChangesBox(changes)

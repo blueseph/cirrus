@@ -1,10 +1,13 @@
-package main
+package cmd
 
 import (
 	"fmt"
 	"io/ioutil"
 	"time"
 
+	"github.com/blueseph/cirrus/cfn"
+	"github.com/blueseph/cirrus/colors"
+	"github.com/blueseph/cirrus/ui"
 	"github.com/urfave/cli/v2"
 )
 
@@ -50,41 +53,31 @@ func upAction(c *cli.Context) error {
 	return nil
 }
 
-// Up manages the CloudFormation stack creation lifecycle
+// Up kicks off the stack creation lifecycle, creating a change set, confirming the change set, and tailing the events.
 func Up(stackName string, template []byte) error {
-	err := verifyAWSCredentials()
+	err := cfn.VerifyAWSCredentials()
 	if err != nil {
 		return err
 	}
 
 	changeSetID := stackName + "-" + fmt.Sprint(time.Now().Unix())
-	exists, err := determineIfStackExists(stackName)
+	exists, err := cfn.DetermineIfStackExists(stackName)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(STATUS + "Creating change set...")
-	changeSet, err := createChanges(stackName, changeSetID, template, exists)
+	fmt.Println(colors.STATUS + "Creating change set...")
+	changeSet, err := cfn.CreateChanges(stackName, changeSetID, template, exists)
 	if err != nil {
 		return err
 	}
 
-	operation := create
+	operation := cfn.StackOperationCreate
 	if exists {
-		operation = update
+		operation = cfn.StackOperationUpdate
 	}
 
-	err = displayChanges(stackName, changeSet, operation)
+	err = ui.DisplayChanges(stackName, changeSet, operation)
 
-	// err = executeChangeSet(stackName, changeSetID)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// err = watchStackEvents(changeSet, operation)
-	// if err != nil {
-	// 	return err
-	// }
-
-	return nil
+	return err
 }

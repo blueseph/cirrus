@@ -1,6 +1,9 @@
-package main
+package cmd
 
-import "github.com/urfave/cli/v2"
+import (
+	"github.com/blueseph/cirrus/cfn"
+	"github.com/urfave/cli/v2"
+)
 
 var downFlags = []cli.Flag{
 	&cli.StringFlag{
@@ -30,12 +33,12 @@ func downAction(c *cli.Context) error {
 
 // Down manages the stack deletion lifecycle
 func Down(stackName string) error {
-	err := verifyAWSCredentials()
+	err := cfn.VerifyAWSCredentials()
 	if err != nil {
 		return err
 	}
 
-	err = deleteStack(stackName)
+	err = cfn.DeleteStack(stackName)
 	if err != nil {
 		return err
 	}
