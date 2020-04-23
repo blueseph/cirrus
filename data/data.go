@@ -24,8 +24,10 @@ type StackInfo struct {
 	StackName     string
 }
 
-func changeBuilder(changes []cloudformation.Change) map[string]DisplayRow {
+// ChangeMap normalizes a slice of changes into a map of DisplayRows
+func ChangeMap(changes []cloudformation.Change) map[string]DisplayRow {
 	mapChanges := make(map[string]DisplayRow)
+
 	for _, change := range changes {
 		mapChanges[*change.ResourceChange.LogicalResourceId] = DisplayRow{
 			LogicalResourceID: *change.ResourceChange.LogicalResourceId,
@@ -38,7 +40,8 @@ func changeBuilder(changes []cloudformation.Change) map[string]DisplayRow {
 	return mapChanges
 }
 
-func eventBuilder(events []cloudformation.StackEvent) map[string]DisplayRow {
+// EventMap normalizes a slice of changes into a map of DisplayRows
+func EventMap(events []cloudformation.StackEvent) map[string]DisplayRow {
 	mapEvents := make(map[string]DisplayRow)
 
 	for _, event := range events {

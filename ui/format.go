@@ -57,7 +57,7 @@ func getTitleBar(info data.StackInfo) string {
 	return title
 }
 
-func formatChange(change data.DisplayRow) string {
+func parseDisplayRow(change data.DisplayRow) string {
 	var formatted string
 	replacement := change.Replacement
 
@@ -75,4 +75,14 @@ func formatChange(change data.DisplayRow) string {
 	}
 
 	return formatted + "\n"
+}
+
+//ParseDisplayRows parses the map of display rows and returns a tview.TextBox consumable string
+func ParseDisplayRows(changes map[string]data.DisplayRow) string {
+	var allChanges string
+	for _, change := range changes {
+		msg := parseDisplayRow(change)
+		allChanges += msg
+	}
+	return allChanges
 }
