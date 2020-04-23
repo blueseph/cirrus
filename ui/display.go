@@ -2,30 +2,14 @@ package ui
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/blueseph/cirrus/cfn"
 	"github.com/blueseph/cirrus/colors"
+	"github.com/blueseph/cirrus/data"
 	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
 )
-
-type changeScreenRow struct {
-	LogicalResourceID string
-	ResourceType      string
-	Status            cloudformation.ResourceStatus
-	Timestamp         time.Time
-	StatusReason      string
-	Replacement       cloudformation.Replacement
-	Action            cloudformation.ChangeAction
-}
-
-type stackInfo struct {
-	stackID       string
-	changeSetName string
-	stackName     string
-}
 
 var (
 	executeButtonLabel string = "Execute"
@@ -35,10 +19,10 @@ var (
 //DisplayChanges shows the change set in a graphic interface and waits for response. Cancels the command if the user declines, or executes and tails the events log
 func DisplayChanges(stackName string, changeSet *cloudformation.DescribeChangeSetResponse, operation cfn.StackOperation) error {
 	changesMap := changeBuilder(changeSet.Changes)
-	info := stackInfo{
-		stackID:       *changeSet.StackId,
-		changeSetName: *changeSet.ChangeSetName,
-		stackName:     *changeSet.StackName,
+	info := data.StackInfo{
+		StackID:       *changeSet.StackId,
+		ChangeSetName: *changeSet.ChangeSetName,
+		StackName:     *changeSet.StackName,
 	}
 
 	err := showChanges(changesMap, operation, info)
@@ -46,10 +30,10 @@ func DisplayChanges(stackName string, changeSet *cloudformation.DescribeChangeSe
 	return err
 }
 
-func changeBuilder(changes []cloudformation.Change) map[string]changeScreenRow {
-	mapChanges := make(map[string]changeScreenRow)
+func changeBuilder(changes []cloudformation.Change) map[string]data.DisplayRow {
+	mapChanges := make(map[string]data.DisplayRow)
 	for _, change := range changes {
-		mapChanges[*change.ResourceChange.LogicalResourceId] = changeScreenRow{
+		mapChanges[*change.ResourceChange.LogicalResourceId] = data.DisplayRow{
 			LogicalResourceID: *change.ResourceChange.LogicalResourceId,
 			ResourceType:      *change.ResourceChange.ResourceType,
 			Replacement:       change.ResourceChange.Replacement,
@@ -60,11 +44,11 @@ func changeBuilder(changes []cloudformation.Change) map[string]changeScreenRow {
 	return mapChanges
 }
 
-func eventBuilder(events []cloudformation.StackEvent) map[string]changeScreenRow {
-	mapEvents := make(map[string]changeScreenRow)
+func eventBuilder(events []cloudformation.StackEvent) map[string]data.DisplayRow {
+	mapEvents := make(map[string]data.DisplayRow)
 
 	for _, event := range events {
-		mapEvents[*event.LogicalResourceId] = changeScreenRow{
+		mapEvents[*event.LogicalResourceId] = data.DisplayRow{
 			LogicalResourceID: *event.LogicalResourceId,
 			ResourceType:      *event.ResourceType,
 			Status:            event.ResourceStatus,
@@ -75,7 +59,7 @@ func eventBuilder(events []cloudformation.StackEvent) map[string]changeScreenRow
 	return mapEvents
 }
 
-func getChangesString(changes map[string]changeScreenRow) string {
+func getChangesString(changes map[string]data.DisplayRow) string {
 	var allChanges string
 	for _, change := range changes {
 		msg := formatChange(change)
@@ -84,24 +68,24 @@ func getChangesString(changes map[string]changeScreenRow) string {
 	return allChanges
 }
 
-// func formatEvent(change changeScreenRow) string {
+// func formatEvent(change data.DisplayRow) string {
 // 	var formatted string
 // 	replacement := change.Replacement
 // }
 
-func createTitleBar(info stackInfo, operation cfn.StackOperation) *tview.TextView {
+func createTitleBar(info data.StackInfo, operation cfn.StackOperation) *tview.TextView {
 	textView := tview.NewTextView().SetScrollable(false).SetDynamicColors(true).SetWordWrap(true)
 
 	go func() {
 		fmt.Fprintf(textView, "%s ", getTitleBar(info))
 	}()
 
-	textView.SetBorder(true).SetTitle(" " + info.stackName + stackOperationColorize(operation) + " ")
+	textView.SetBorder(true).SetTitle(" " + info.StackName + stackOperationColorize(operation) + " ")
 
 	return textView
 }
 
-func createChangesBox(changes map[string]changeScreenRow) *tview.TextView {
+func createChangesBox(changes map[string]data.DisplayRow) *tview.TextView {
 	textView := tview.NewTextView().SetRegions(true).SetScrollable(true).SetDynamicColors(true).SetWordWrap(false)
 
 	go func() {
@@ -127,7 +111,7 @@ func createActionBar(app *tview.Application) *tview.Form {
 	return form
 }
 
-func showChanges(changes map[string]changeScreenRow, operation cfn.StackOperation, info stackInfo) error {
+func showChanges(changes map[string]data.DisplayRow, operation cfn.StackOperation, info data.StackInfo) error {
 	app := tview.NewApplication()
 	titleBar := createTitleBar(info, operation)
 	changesBox := createChangesBox(changes)

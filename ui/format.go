@@ -5,6 +5,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/blueseph/cirrus/cfn"
+	"github.com/blueseph/cirrus/data"
 )
 
 func stackOperationColorize(operation cfn.StackOperation) string {
@@ -48,15 +49,15 @@ func resourceTypeFormat(resourceType string) string {
 	return "[grey::d]" + lowered + "[-]"
 }
 
-func getTitleBar(info stackInfo) string {
+func getTitleBar(info data.StackInfo) string {
 	var title string
-	title += "[white]Stack:     [white::b]" + info.stackName + "\n"
-	title += "[white]Changeset: [white::b]" + info.changeSetName + "\n"
-	title += "[white]Id:        [white::b]" + info.stackID
+	title += "[white]Stack:     [white::b]" + info.StackName + "\n"
+	title += "[white]Changeset: [white::b]" + info.ChangeSetName + "\n"
+	title += "[white]Id:        [white::b]" + info.StackID
 	return title
 }
 
-func formatChange(change changeScreenRow) string {
+func formatChange(change data.DisplayRow) string {
 	var formatted string
 	replacement := change.Replacement
 
