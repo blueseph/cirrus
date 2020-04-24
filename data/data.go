@@ -37,6 +37,29 @@ const (
 	DisplayRowSourceEvent DisplayRowSource = "event"
 )
 
+var (
+	//PositiveEventStatus indicates positive event statuses
+	PositiveEventStatus []cloudformation.ResourceStatus = []cloudformation.ResourceStatus{
+		cloudformation.ResourceStatusCreateComplete,
+		cloudformation.ResourceStatusDeleteComplete,
+		cloudformation.ResourceStatusUpdateComplete,
+	}
+
+	//NegativeEventStatus indicates negative event statuses
+	NegativeEventStatus []cloudformation.ResourceStatus = []cloudformation.ResourceStatus{
+		cloudformation.ResourceStatusCreateFailed,
+		cloudformation.ResourceStatusDeleteFailed,
+		cloudformation.ResourceStatusUpdateFailed,
+	}
+
+	//PendingEventStatus indicates an event status that is in a pending state
+	PendingEventStatus []cloudformation.ResourceStatus = []cloudformation.ResourceStatus{
+		cloudformation.ResourceStatusCreateInProgress,
+		cloudformation.ResourceStatusDeleteInProgress,
+		cloudformation.ResourceStatusUpdateInProgress,
+	}
+)
+
 // ChangeMap normalizes a slice of changes into a map of DisplayRows
 func ChangeMap(changes []cloudformation.Change, active bool) map[string]DisplayRow {
 	mapChanges := make(map[string]DisplayRow)
@@ -66,9 +89,10 @@ func EventMap(events []cloudformation.StackEvent) map[string]DisplayRow {
 			Status:            event.ResourceStatus,
 			Timestamp:         *event.Timestamp,
 			Source:            DisplayRowSourceEvent,
-			Active:            true,
 		}
 	}
 
 	return mapEvents
 }
+
+//func MergeMaps() {}

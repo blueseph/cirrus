@@ -6,6 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/blueseph/cirrus/cfn"
 	"github.com/blueseph/cirrus/data"
+	"github.com/blueseph/cirrus/utils"
 )
 
 func stackOperationColorize(operation cfn.StackOperation) string {
@@ -23,7 +24,7 @@ func stackOperationColorize(operation cfn.StackOperation) string {
 	return color + strings.ToUpper(string(operation)) + end
 }
 
-func resourceChangeColorize(change cloudformation.ChangeAction, ascii bool) string {
+func colorizeAction(change cloudformation.ChangeAction, ascii bool) string {
 	color := "[green::b]"
 	end := "[-]"
 
@@ -40,6 +41,21 @@ func resourceChangeColorize(change cloudformation.ChangeAction, ascii bool) stri
 	}
 
 	return color + strings.ToUpper(string(change)) + end
+}
+
+func colorizeStatus(status cloudformation.ResourceStatus) string {
+	color := "[green::b]"
+	end := "[-]"
+
+	if utils.ContainsStatus(data.PendingEventStatus, status) {
+		color = "[yellow::b]"
+	}
+
+	if utils.ContainsStatus(data.NegativeEventStatus, status) {
+		color = "[red::b]"
+	}
+
+	return color + strings.ToUpper(string(status)) + end
 }
 
 func resourceTypeFormat(resourceType string) string {
@@ -72,11 +88,11 @@ func parseChangeRow(row data.DisplayRow) string {
 	if row.Active {
 		formatted += "[PENDING_" + string(row.Action) + "]"
 	} else {
-		formatted += "[" + resourceChangeColorize(row.Action, true) + "] "
+		formatted += "[" + colorizeAction(row.Action, true) + "] "
 	}
 
 	formatted += "[#00b8ea]" + row.LogicalResourceID + " [white]"
-	formatted += resourceChangeColorize(row.Action, false) + " "
+	formatted += colorizeAction(row.Action, false) + " "
 	formatted += resourceTypeFormat(row.ResourceType)
 
 	if replacement == cloudformation.ReplacementTrue {
@@ -92,6 +108,11 @@ func parseChangeRow(row data.DisplayRow) string {
 
 func parseEventRow(row data.DisplayRow) string {
 	var formatted string
+
+	formatted += "[" + colorizeStatus(row.Status) + "]"
+	formatted += "[#00b8ea]" + row.LogicalResourceID + " [white]"
+	formatted += colorizeAction(row.Action, false) + " "
+	formatted += resourceTypeFormat(row.ResourceType)
 
 	return formatted
 }

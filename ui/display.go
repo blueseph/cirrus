@@ -34,9 +34,7 @@ func DisplayChanges(stackName string, changeSet *cloudformation.DescribeChangeSe
 func createTitleBar(info data.StackInfo, operation cfn.StackOperation) *tview.TextView {
 	textView := tview.NewTextView().SetScrollable(false).SetDynamicColors(true).SetWordWrap(true)
 
-	go func() {
-		fmt.Fprintf(textView, "%s ", getTitleBar(info))
-	}()
+	fmt.Fprintf(textView, "%s ", getTitleBar(info))
 
 	textView.SetBorder(true).SetTitle(" " + info.StackName + stackOperationColorize(operation) + " ")
 
@@ -87,8 +85,34 @@ func showScreen(displayRows map[string]data.DisplayRow, operation cfn.StackOpera
 		AddItem(displayBox, 0, 3, false).
 		AddItem(actionBar, 5, 0, false)
 
-	// hacky workarounds
-	view.SetInputCapture(func(e *tcell.EventKey) *tcell.EventKey {
+	// y u ck
+	viewSetInputCapture := viewInputCaptureFn(app, actionBar, displayBox)
+	view.SetInputCapture(viewSetInputCapture)
+
+	appSetInputCapture := appSetInputCaptureFn(view)
+	app.SetInputCapture(appSetInputCapture)
+
+	if err := app.SetRoot(view, true).SetFocus(displayBox).Run(); err != nil {
+		panic(err)
+	}
+
+	return nil
+}
+
+//hacky workaround
+func appSetInputCaptureFn(view *tview.Flex) func(*tcell.EventKey) *tcell.EventKey {
+	return func(e *tcell.EventKey) *tcell.EventKey {
+		if view.HasFocus() {
+			view.GetInputCapture()(e)
+		}
+
+		return e
+	}
+}
+
+//hacky workaround
+func viewInputCaptureFn(app *tview.Application, actionBar *tview.Form, displayBox *tview.TextView) func(*tcell.EventKey) *tcell.EventKey {
+	return func(e *tcell.EventKey) *tcell.EventKey {
 		executeButton := actionBar.GetButton(0)
 		declineButton := actionBar.GetButton(1)
 
@@ -119,19 +143,5 @@ func showScreen(displayRows map[string]data.DisplayRow, operation cfn.StackOpera
 		}
 
 		return e
-	})
-
-	app.SetInputCapture(func(e *tcell.EventKey) *tcell.EventKey {
-		if view.HasFocus() {
-			view.GetInputCapture()(e)
-		}
-
-		return e
-	})
-
-	if err := app.SetRoot(view, true).SetFocus(displayBox).Run(); err != nil {
-		panic(err)
 	}
-
-	return nil
 }
