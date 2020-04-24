@@ -57,14 +57,27 @@ func getTitleBar(info data.StackInfo) string {
 	return title
 }
 
-func parseDisplayRow(change data.DisplayRow) string {
-	var formatted string
-	replacement := change.Replacement
+func parseDisplayRow(row data.DisplayRow) string {
+	if row.Source == data.DisplayRowSourceChangeSet {
+		return parseChangeRow(row)
+	}
 
-	formatted += "[" + resourceChangeColorize(change.Action, true) + "] "
-	formatted += "[#00b8ea]" + change.LogicalResourceID + " [white]"
-	formatted += resourceChangeColorize(change.Action, false) + " "
-	formatted += resourceTypeFormat(change.ResourceType)
+	return parseEventRow(row)
+}
+
+func parseChangeRow(row data.DisplayRow) string {
+	var formatted string
+	replacement := row.Replacement
+
+	if row.Active {
+		formatted += "[PENDING_" + string(row.Action) + "]"
+	} else {
+		formatted += "[" + resourceChangeColorize(row.Action, true) + "] "
+	}
+
+	formatted += "[#00b8ea]" + row.LogicalResourceID + " [white]"
+	formatted += resourceChangeColorize(row.Action, false) + " "
+	formatted += resourceTypeFormat(row.ResourceType)
 
 	if replacement == cloudformation.ReplacementTrue {
 		formatted += " [red]Replace[white]"
@@ -75,6 +88,12 @@ func parseDisplayRow(change data.DisplayRow) string {
 	}
 
 	return formatted + "\n"
+}
+
+func parseEventRow(row data.DisplayRow) string {
+	var formatted string
+
+	return formatted
 }
 
 //ParseDisplayRows parses the map of display rows and returns a tview.TextBox consumable string

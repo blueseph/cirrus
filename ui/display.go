@@ -18,7 +18,7 @@ var (
 
 //DisplayChanges shows the change set in a graphic interface and waits for response. Cancels the command if the user declines, or executes and tails the events log
 func DisplayChanges(stackName string, changeSet *cloudformation.DescribeChangeSetResponse, operation cfn.StackOperation) error {
-	displayRows := data.ChangeMap(changeSet.Changes)
+	displayRows := data.ChangeMap(changeSet.Changes, false)
 
 	info := data.StackInfo{
 		StackID:       *changeSet.StackId,

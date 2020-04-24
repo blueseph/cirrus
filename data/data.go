@@ -15,6 +15,8 @@ type DisplayRow struct {
 	StatusReason      string
 	Replacement       cloudformation.Replacement
 	Action            cloudformation.ChangeAction
+	Source            DisplayRowSource
+	Active            bool
 }
 
 //StackInfo is a normalized data structure to store identifier properties of a stack/change set
@@ -24,8 +26,19 @@ type StackInfo struct {
 	StackName     string
 }
 
+//DisplayRowSource is an enum to determine the origin of the display row
+type DisplayRowSource string
+
+const (
+	//DisplayRowSourceChangeSet indicates a display row came from a Change Set
+	DisplayRowSourceChangeSet DisplayRowSource = "change"
+
+	//DisplayRowSourceEvent indicates a display row came from an Event
+	DisplayRowSourceEvent DisplayRowSource = "event"
+)
+
 // ChangeMap normalizes a slice of changes into a map of DisplayRows
-func ChangeMap(changes []cloudformation.Change) map[string]DisplayRow {
+func ChangeMap(changes []cloudformation.Change, active bool) map[string]DisplayRow {
 	mapChanges := make(map[string]DisplayRow)
 
 	for _, change := range changes {
@@ -34,6 +47,8 @@ func ChangeMap(changes []cloudformation.Change) map[string]DisplayRow {
 			ResourceType:      *change.ResourceChange.ResourceType,
 			Replacement:       change.ResourceChange.Replacement,
 			Action:            change.ResourceChange.Action,
+			Source:            DisplayRowSourceChangeSet,
+			Active:            active,
 		}
 	}
 
@@ -50,6 +65,8 @@ func EventMap(events []cloudformation.StackEvent) map[string]DisplayRow {
 			ResourceType:      *event.ResourceType,
 			Status:            event.ResourceStatus,
 			Timestamp:         *event.Timestamp,
+			Source:            DisplayRowSourceEvent,
+			Active:            true,
 		}
 	}
 
