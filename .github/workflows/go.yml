@@ -3,8 +3,8 @@ name: Go
 on:
   push:
     branches: [ master ]
-  pull_request:
-    branches: [ master ]
+  tags:
+    - v*
 
 jobs:
 
@@ -31,4 +31,21 @@ jobs:
         fi
 
     - name: Build
-      run: go build -v .
+      run: ./build.sh
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@latest
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: $${{ github.ref }}
+        release_name: ${{ github.ref }}
+        prerelease: true
+
+    - name: Upload Release Artifact
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
