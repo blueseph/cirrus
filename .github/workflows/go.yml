@@ -12,6 +12,9 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
+    - name: Get the version
+      id: get_version
+      run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
 
     - name: Set up Go 1.14
       uses: actions/setup-go@v1
@@ -39,8 +42,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: $${{ github.ref }}
-        release_name: ${{ github.ref }}
+        tag_name: $${{ steps.get_version.outputs.VERSION }}
+        release_name: ${{ steps.get_version.outputs.VERSION }}
         prerelease: true
 
     - name: Upload Release Artifact Linux amd64
