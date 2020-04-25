@@ -51,17 +51,16 @@ func executeButtonCallbackFn(app *tview.Application, displayBox *tview.TextView,
 					events := paginator.CurrentPage()
 
 					for _, event := range events.StackEvents {
-
-						if *event.ResourceType == data.CloudformationStackResource {
-							if !utils.ContainsStackStatus(data.PendingStackStatus, event.ResourceStatus) {
-								exit()
-							}
-							eventIds[*event.EventId] = true
-						} else if !eventIds[*event.EventId] {
-							if event.Timestamp.After(now) {
+						if event.Timestamp.After(now) {
+							if *event.ResourceType == data.CloudformationStackResource {
+								if !utils.ContainsStackStatus(data.PendingStackStatus, event.ResourceStatus) {
+									exit()
+								}
+								eventIds[*event.EventId] = true
+							} else if !eventIds[*event.EventId] {
 								activatedDisplayRows[*event.LogicalResourceId] = data.CreateDisplayRowFromEvent(event)
+								eventIds[*event.EventId] = true
 							}
-							eventIds[*event.EventId] = true
 						}
 					}
 				}

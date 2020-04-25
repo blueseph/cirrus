@@ -71,6 +71,11 @@ func CreateChanges(info data.StackInfo, template []byte, exists bool) (*cloudfor
 
 func createChangeSet(info data.StackInfo, template []byte, exists bool) error {
 	stringTemplate := string(template)
+	capabilities := []cloudformation.Capability{
+		cloudformation.CapabilityCapabilityAutoExpand,
+		cloudformation.CapabilityCapabilityIam,
+		cloudformation.CapabilityCapabilityNamedIam,
+	}
 
 	changeSetType := cloudformation.ChangeSetTypeCreate
 	if exists {
@@ -84,6 +89,7 @@ func createChangeSet(info data.StackInfo, template []byte, exists bool) error {
 		StackName:     &info.StackName,
 		TemplateBody:  &stringTemplate,
 		ChangeSetType: changeSetType,
+		Capabilities:  capabilities,
 	}
 
 	req := client.CreateChangeSetRequest(&input)

@@ -87,6 +87,8 @@ var (
 		cloudformation.StackStatusReviewInProgress,
 		cloudformation.StackStatusUpdateRollbackInProgress,
 		cloudformation.StackStatusRollbackInProgress,
+		cloudformation.StackStatusUpdateCompleteCleanupInProgress,
+		cloudformation.StackStatusUpdateRollbackCompleteCleanupInProgress,
 	}
 )
 
