@@ -31,7 +31,7 @@ jobs:
         fi
 
     - name: Build
-      run: ./build.sh
+      run: sudo ./build.sh
 
     - name: Create Release
       id: create_release
