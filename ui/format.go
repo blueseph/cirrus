@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
@@ -86,21 +87,25 @@ func parseChangeRow(row data.DisplayRow) string {
 	replacement := row.Replacement
 
 	if row.Active {
-		formatted += "[PENDING_" + string(row.Action) + "]"
+		formatted += "[[grey]PENDING_" + strings.ToUpper(string(row.Action)) + "[-]]"
 	} else {
 		formatted += "[" + colorizeAction(row.Action, true) + "] "
 	}
 
 	formatted += "[#00b8ea]" + row.LogicalResourceID + " [white]"
-	formatted += colorizeAction(row.Action, false) + " "
+	if !row.Active {
+		formatted += colorizeAction(row.Action, false) + " "
+	}
 	formatted += resourceTypeFormat(row.ResourceType)
 
-	if replacement == cloudformation.ReplacementTrue {
-		formatted += " [red]Replace[white]"
-	}
+	if !row.Active {
+		if replacement == cloudformation.ReplacementTrue {
+			formatted += " [red]Replace[white]"
+		}
 
-	if replacement == cloudformation.ReplacementConditional {
-		formatted += " [yellow]Replace conditional[white]"
+		if replacement == cloudformation.ReplacementConditional {
+			formatted += " [yellow]Replace conditional[white]"
+		}
 	}
 
 	return formatted + "\n"
@@ -111,17 +116,24 @@ func parseEventRow(row data.DisplayRow) string {
 
 	formatted += "[" + colorizeStatus(row.Status) + "]"
 	formatted += "[#00b8ea]" + row.LogicalResourceID + " [white]"
-	formatted += colorizeAction(row.Action, false) + " "
 	formatted += resourceTypeFormat(row.ResourceType)
 
-	return formatted
+	return formatted + "\n"
 }
 
-//ParseDisplayRows parses the map of display rows and returns a tview.TextBox consumable string
-func ParseDisplayRows(changes map[string]data.DisplayRow) string {
+//ParseDisplayRows parses and sorts the map of display rows and returns a tview.TextBox consumable string
+func ParseDisplayRows(displayRows map[string]data.DisplayRow) string {
+	keys := make([]string, 0)
 	var allChanges string
-	for _, change := range changes {
-		msg := parseDisplayRow(change)
+
+	for key := range displayRows {
+		keys = append(keys, key)
+	}
+
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		msg := parseDisplayRow(displayRows[key])
 		allChanges += msg
 	}
 	return allChanges

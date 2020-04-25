@@ -7,6 +7,7 @@ import (
 
 	"github.com/blueseph/cirrus/cfn"
 	"github.com/blueseph/cirrus/colors"
+	"github.com/blueseph/cirrus/data"
 	"github.com/blueseph/cirrus/ui"
 	"github.com/urfave/cli/v2"
 )
@@ -55,29 +56,37 @@ func upAction(c *cli.Context) error {
 
 // Up kicks off the stack creation lifecycle, creating a change set, confirming the change set, and tailing the events.
 func Up(stackName string, template []byte) error {
+	changeSetName := stackName + "-" + fmt.Sprint(time.Now().Unix())
+
+	info := data.StackInfo{
+		StackName:     stackName,
+		ChangeSetName: changeSetName,
+	}
+
 	err := cfn.VerifyAWSCredentials()
 	if err != nil {
 		return err
 	}
 
-	changeSetID := stackName + "-" + fmt.Sprint(time.Now().Unix())
-	exists, err := cfn.DetermineIfStackExists(stackName)
+	exists, err := cfn.DetermineIfStackExists(info)
 	if err != nil {
 		return err
 	}
 
 	fmt.Println(colors.STATUS + "Creating change set...")
-	changeSet, err := cfn.CreateChanges(stackName, changeSetID, template, exists)
+	changeSet, err := cfn.CreateChanges(info, template, exists)
 	if err != nil {
 		return err
 	}
+
+	info.StackID = *changeSet.StackId
 
 	operation := cfn.StackOperationCreate
 	if exists {
 		operation = cfn.StackOperationUpdate
 	}
 
-	err = ui.DisplayChanges(stackName, changeSet, operation)
+	err = ui.DisplayChanges(info, changeSet, operation)
 
 	return err
 }

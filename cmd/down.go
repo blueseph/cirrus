@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/blueseph/cirrus/cfn"
+	"github.com/blueseph/cirrus/data"
 	"github.com/urfave/cli/v2"
 )
 
@@ -33,17 +34,21 @@ func downAction(c *cli.Context) error {
 
 // Down manages the stack deletion lifecycle
 func Down(stackName string) error {
+	info := data.StackInfo{
+		StackName: stackName,
+	}
+
 	err := cfn.VerifyAWSCredentials()
 	if err != nil {
 		return err
 	}
 
-	err = cfn.DeleteStack(stackName)
+	err = cfn.DeleteStack(info)
 	if err != nil {
 		return err
 	}
 
-	// err = displayDelete(stackId)
+	// err = displayDelete(info)
 	// if err != nil {
 	// 	return err
 	// }

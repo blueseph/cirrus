@@ -5,7 +5,6 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/blueseph/cirrus/cfn"
-	"github.com/blueseph/cirrus/colors"
 	"github.com/blueseph/cirrus/data"
 	"github.com/gdamore/tcell"
 	"github.com/rivo/tview"
@@ -17,14 +16,8 @@ var (
 )
 
 //DisplayChanges shows the change set in a graphic interface and waits for response. Cancels the command if the user declines, or executes and tails the events log
-func DisplayChanges(stackName string, changeSet *cloudformation.DescribeChangeSetResponse, operation cfn.StackOperation) error {
+func DisplayChanges(info data.StackInfo, changeSet *cloudformation.DescribeChangeSetResponse, operation cfn.StackOperation) error {
 	displayRows := data.ChangeMap(changeSet.Changes, false)
-
-	info := data.StackInfo{
-		StackID:       *changeSet.StackId,
-		ChangeSetName: *changeSet.ChangeSetName,
-		StackName:     *changeSet.StackName,
-	}
 
 	err := showScreen(displayRows, operation, info)
 
@@ -41,8 +34,11 @@ func createTitleBar(info data.StackInfo, operation cfn.StackOperation) *tview.Te
 	return textView
 }
 
-func createDisplayRowBox() *tview.TextView {
-	textView := tview.NewTextView().SetRegions(true).SetScrollable(true).SetDynamicColors(true).SetWordWrap(false)
+func createDisplayRowBox(app *tview.Application) *tview.TextView {
+	textView := tview.NewTextView().SetRegions(true).SetScrollable(true).SetDynamicColors(true).SetWrap(false).
+		SetChangedFunc(func() {
+			app.Draw()
+		})
 
 	textView.SetBorder(true).SetTitle(" Changes ")
 
@@ -51,18 +47,16 @@ func createDisplayRowBox() *tview.TextView {
 
 func fillDisplayBoxFn(displayBox *tview.TextView) func(map[string]data.DisplayRow) {
 	return func(displayRows map[string]data.DisplayRow) {
-		msg := ParseDisplayRows(displayRows)
-		fmt.Fprintf(displayBox, "%s ", msg)
+		displayBox.SetText(ParseDisplayRows(displayRows))
 	}
 }
 
-func createActionBar(app *tview.Application) *tview.Form {
-	form := tview.NewForm().
-		AddButton(executeButtonLabel, nil).
-		AddButton(declineButtonLabel, func() {
-			defer fmt.Println(colors.ERROR + "User declined change set")
-			app.Stop()
-		})
+func createActionBar(app *tview.Application, displayBox *tview.TextView, info data.StackInfo, displayRows map[string]data.DisplayRow, fillDisplayBox func(map[string]data.DisplayRow)) *tview.Form {
+	form := tview.NewForm()
+
+	form.
+		AddButton(executeButtonLabel, executeButtonCallbackFn(app, displayBox, form, info, displayRows, fillDisplayBox)).
+		AddButton(declineButtonLabel, declineButtonCallbackFn(app))
 
 	form.SetButtonsAlign(tview.AlignCenter).SetBorder(true).SetTitle(" Actions ")
 
@@ -71,11 +65,12 @@ func createActionBar(app *tview.Application) *tview.Form {
 
 func showScreen(displayRows map[string]data.DisplayRow, operation cfn.StackOperation, info data.StackInfo) error {
 	app := tview.NewApplication()
-	titleBar := createTitleBar(info, operation)
-	actionBar := createActionBar(app)
 
-	displayBox := createDisplayRowBox()
+	displayBox := createDisplayRowBox(app)
 	fillDisplayBox := fillDisplayBoxFn(displayBox)
+
+	titleBar := createTitleBar(info, operation)
+	actionBar := createActionBar(app, displayBox, info, displayRows, fillDisplayBox)
 
 	fillDisplayBox(displayRows)
 	// liveBar := createLiveBar

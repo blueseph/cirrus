@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws/external"
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/blueseph/cirrus/colors"
+	"github.com/blueseph/cirrus/data"
 )
 
 var (
@@ -52,23 +53,23 @@ func getClient() *cloudformation.Client {
 }
 
 //CreateChanges creates a change set, waits for it to complete creating, then describes the change set.
-func CreateChanges(stackName string, changeSetID string, template []byte, exists bool) (*cloudformation.DescribeChangeSetResponse, error) {
-	err := createChangeSet(stackName, changeSetID, template, exists)
+func CreateChanges(info data.StackInfo, template []byte, exists bool) (*cloudformation.DescribeChangeSetResponse, error) {
+	err := createChangeSet(info, template, exists)
 	if err != nil {
 		return nil, err
 	}
 
-	err = waitForChangeSet(stackName, changeSetID)
+	err = waitForChangeSet(info)
 	if err != nil {
 		return nil, err
 	}
 
-	changes, err := describeChangeSet(stackName, changeSetID)
+	changes, err := describeChangeSet(info)
 
 	return changes, err
 }
 
-func createChangeSet(stackName string, changeSetID string, template []byte, exists bool) error {
+func createChangeSet(info data.StackInfo, template []byte, exists bool) error {
 	stringTemplate := string(template)
 
 	changeSetType := cloudformation.ChangeSetTypeCreate
@@ -79,8 +80,8 @@ func createChangeSet(stackName string, changeSetID string, template []byte, exis
 	client := getClient()
 
 	input := cloudformation.CreateChangeSetInput{
-		ChangeSetName: &changeSetID,
-		StackName:     &stackName,
+		ChangeSetName: &info.ChangeSetName,
+		StackName:     &info.StackName,
 		TemplateBody:  &stringTemplate,
 		ChangeSetType: changeSetType,
 	}
@@ -95,12 +96,12 @@ func createChangeSet(stackName string, changeSetID string, template []byte, exis
 	return nil
 }
 
-func waitForChangeSet(stackName string, changeSetID string) error {
+func waitForChangeSet(info data.StackInfo) error {
 	client := getClient()
 
 	input := cloudformation.DescribeChangeSetInput{
-		StackName:     &stackName,
-		ChangeSetName: &changeSetID,
+		StackName:     &info.StackName,
+		ChangeSetName: &info.ChangeSetName,
 	}
 
 	err := client.WaitUntilChangeSetCreateComplete(context.Background(), &input)
@@ -112,10 +113,11 @@ func waitForChangeSet(stackName string, changeSetID string) error {
 	return nil
 }
 
-func executeChangeSet(stackName string, changeSetID string) error {
+// ExecuteChangeSet executes the given change set
+func ExecuteChangeSet(info data.StackInfo) error {
 	input := cloudformation.ExecuteChangeSetInput{
-		StackName:     &stackName,
-		ChangeSetName: &changeSetID,
+		StackName:     &info.StackName,
+		ChangeSetName: &info.ChangeSetName,
 	}
 
 	client := getClient()
@@ -127,10 +129,10 @@ func executeChangeSet(stackName string, changeSetID string) error {
 	return err
 }
 
-func describeChangeSet(stackName string, changeSetID string) (*cloudformation.DescribeChangeSetResponse, error) {
+func describeChangeSet(info data.StackInfo) (*cloudformation.DescribeChangeSetResponse, error) {
 	input := cloudformation.DescribeChangeSetInput{
-		StackName:     &stackName,
-		ChangeSetName: &changeSetID,
+		StackName:     &info.StackName,
+		ChangeSetName: &info.ChangeSetName,
 	}
 
 	client := getClient()
@@ -140,29 +142,15 @@ func describeChangeSet(stackName string, changeSetID string) (*cloudformation.De
 	return req.Send(context.Background())
 }
 
-func applyChangeSet(stackName string, changeSetID string) (*cloudformation.DescribeChangeSetResponse, error) {
-	err := executeChangeSet(stackName, changeSetID)
-	if err != nil {
-		return nil, err
-	}
-
-	changeSet, err := describeChangeSet(stackName, changeSetID)
-	if err != nil {
-		return nil, err
-	}
-
-	return changeSet, nil
-}
-
-func getChanges(stackName string, changeSetID string) ([]cloudformation.Change, error) {
-	changeSet, err := describeChangeSet(stackName, changeSetID)
+func getChanges(info data.StackInfo) ([]cloudformation.Change, error) {
+	changeSet, err := describeChangeSet(info)
 
 	return changeSet.Changes, err
 }
 
-func getStack(stackName string) (*cloudformation.DescribeStacksResponse, error) {
+func getStack(info data.StackInfo) (*cloudformation.DescribeStacksResponse, error) {
 	input := cloudformation.DescribeStacksInput{
-		StackName: &stackName,
+		StackName: &info.StackName,
 	}
 
 	client := getClient()
@@ -173,8 +161,8 @@ func getStack(stackName string) (*cloudformation.DescribeStacksResponse, error) 
 }
 
 // DetermineIfStackExists pulls a stack via the stackName and determines if it exists. If it is in a "review in progress" state, it counts as not existing
-func DetermineIfStackExists(stackName string) (bool, error) {
-	stack, err := getStack(stackName)
+func DetermineIfStackExists(info data.StackInfo) (bool, error) {
+	stack, err := getStack(info)
 
 	if err != nil {
 		s := err.Error()
@@ -196,9 +184,9 @@ func DetermineIfStackExists(stackName string) (bool, error) {
 }
 
 // DeleteStack deletes the stack given a stack name
-func DeleteStack(stackName string) error {
+func DeleteStack(info data.StackInfo) error {
 	input := cloudformation.DeleteStackInput{
-		StackName: &stackName,
+		StackName: &info.StackName,
 	}
 
 	client := getClient()
@@ -213,22 +201,19 @@ func DeleteStack(stackName string) error {
 	return nil
 }
 
-func getEvents(stackName string) (*cloudformation.DescribeStackEventsResponse, error) {
+// GetStackEvents gets all the events from a particular CloudFormation stack
+func GetStackEvents(info data.StackInfo) cloudformation.DescribeStackEventsPaginator {
 	input := cloudformation.DescribeStackEventsInput{
-		StackName: &stackName,
+		StackName: &info.StackName,
 	}
 
 	client := getClient()
 
 	req := client.DescribeStackEventsRequest(&input)
 
-	events, err := req.Send(context.Background())
+	events := cloudformation.NewDescribeStackEventsPaginator(req)
 
-	if err != nil {
-		return nil, err
-	}
-
-	return events, nil
+	return events
 }
 
 // VerifyAWSCredentials verifies AWS credentials are properly configured by running a List Stack command and analyzing errors for common issues with credentials

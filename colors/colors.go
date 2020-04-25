@@ -28,6 +28,9 @@ var (
 
 	//STATUS prints a stylized status prefix
 	STATUS = White("[") + Teal("STATUS") + White("]") + " "
+
+	//SUCCESS prints a stylized status prefix
+	SUCCESS = White("[") + Green("SUCCESS") + White("]") + " "
 )
 
 func color(colorString string) func(...interface{}) string {
