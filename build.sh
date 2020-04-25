@@ -17,12 +17,12 @@ for platform in ${!PLATFORMS[@]}; do
                 bin_name="${NAME}.exe"
             fi
 
-            mkdir -p "$OUTPUT_DIR/$full_name"
+            mkdir -p "$OUTPUT/$full_name"
 
-            GOOS=$platform GOARCH=$architecture go build -o "$OUTPUT_DIR/${full_name}/${bin_name}"
+            GOOS=$platform GOARCH=$architecture go build -o "$OUTPUT/${full_name}/${bin_name}"
 
-            zip -9 -r "$OUTPUT_DIR/${full_name}.zip" "$OUTPUT_DIR/$full_name"
+            zip -9 -r "$OUTPUT/${full_name}.zip" "$OUTPUT/$full_name"
 
-            rm -r "$OUTPUT_DIR/$full_name"
+            rm -r "$OUTPUT/$full_name"
     done
 done

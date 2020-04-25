@@ -43,9 +43,62 @@ jobs:
         release_name: ${{ github.ref }}
         prerelease: true
 
-    - name: Upload Release Artifact
+    - name: Upload Release Artifact Linux amd64
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./dist/cirrus-_linux-amd64.zip
+        asset_name: cirrus-linux-amd64.zip
+        asset_content_type: application/zip
+
+    - name: Upload Release Artifact Linux i386
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./dist/cirrus-_linux-i386.zip
+        asset_name: cirrus-linux-i386.zip
+        asset_content_type: application/zip
+
+    - name: Upload Release Artifact OSX amd64
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./dist/cirrus-_osx-amd64.zip
+        asset_name: cirrus-osx-amd64.zip
+        asset_content_type: application/zip
+
+    - name: Upload Release Artifact OSX i386
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./dist/cirrus-_osx-i386.zip
+        asset_name: cirrus-osx-i386.zip
+        asset_content_type: application/zip
+
+    - name: Upload Release Artifact Windows amd64
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./dist/cirrus-_win-amd64.zip
+        asset_name: cirrus-win-amd64.zip
+        asset_content_type: application/zip
+
+    - name: Upload Release Artifact Windows i386
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./dist/cirrus-_win-i386.zip
+        asset_name: cirrus-win-i386.zip
+        asset_content_type: application/zip
