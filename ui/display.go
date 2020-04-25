@@ -24,10 +24,19 @@ func DisplayChanges(info data.StackInfo, changeSet *cloudformation.DescribeChang
 	return err
 }
 
-func createTitleBar(info data.StackInfo, operation cfn.StackOperation) *tview.TextView {
-	textView := tview.NewTextView().SetScrollable(false).SetDynamicColors(true).SetWordWrap(true)
+//DisplayDeletes shows the stack resoures and tails the events log.
+func DisplayDeletes(info data.StackInfo, resources []cloudformation.StackResourceSummary) error {
+	displayRows := data.ResourceMap(resources)
 
-	fmt.Fprintf(textView, "%s ", getTitleBar(info))
+	err := showScreen(displayRows, cfn.StackOperationDelete, info)
+
+	return err
+}
+
+func createTitleBar(info data.StackInfo, operation cfn.StackOperation) *tview.TextView {
+	textView := tview.NewTextView().SetScrollable(false).SetDynamicColors(true).SetWrap(true)
+
+	fmt.Fprintf(textView, "%s ", getTitleBar(info, operation))
 
 	textView.SetBorder(true).SetTitle(" " + info.StackName + stackOperationColorize(operation) + " ")
 
@@ -51,12 +60,12 @@ func fillDisplayBoxFn(displayBox *tview.TextView) func(map[string]data.DisplayRo
 	}
 }
 
-func createActionBar(app *tview.Application, displayBox *tview.TextView, info data.StackInfo, displayRows map[string]data.DisplayRow, fillDisplayBox func(map[string]data.DisplayRow)) *tview.Form {
+func createActionBar(app *tview.Application, displayBox *tview.TextView, info data.StackInfo, operation cfn.StackOperation, displayRows map[string]data.DisplayRow, fillDisplayBox func(map[string]data.DisplayRow)) *tview.Form {
 	form := tview.NewForm()
 
 	form.
-		AddButton(executeButtonLabel, executeButtonCallbackFn(app, displayBox, form, info, displayRows, fillDisplayBox)).
-		AddButton(declineButtonLabel, declineButtonCallbackFn(app))
+		AddButton(executeButtonLabel, executeButtonCallbackFn(app, displayBox, form, info, operation, displayRows, fillDisplayBox)).
+		AddButton(declineButtonLabel, declineButtonCallbackFn(app, operation))
 
 	form.SetButtonsAlign(tview.AlignCenter).SetBorder(true).SetTitle(" Actions ")
 
@@ -70,7 +79,7 @@ func showScreen(displayRows map[string]data.DisplayRow, operation cfn.StackOpera
 	fillDisplayBox := fillDisplayBoxFn(displayBox)
 
 	titleBar := createTitleBar(info, operation)
-	actionBar := createActionBar(app, displayBox, info, displayRows, fillDisplayBox)
+	actionBar := createActionBar(app, displayBox, info, operation, displayRows, fillDisplayBox)
 
 	fillDisplayBox(displayRows)
 	// liveBar := createLiveBar

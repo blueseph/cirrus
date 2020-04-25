@@ -68,7 +68,7 @@ func Up(stackName string, template []byte) error {
 		return err
 	}
 
-	exists, err := cfn.DetermineIfStackExists(info)
+	exists, err := cfn.DetermineIfStackExists(info.StackName)
 	if err != nil {
 		return err
 	}

@@ -154,21 +154,27 @@ func getChanges(info data.StackInfo) ([]cloudformation.Change, error) {
 	return changeSet.Changes, err
 }
 
-func getStack(info data.StackInfo) (*cloudformation.DescribeStacksResponse, error) {
+//GetStack retrieves the information for the given stack name
+func GetStack(stackName string) (*cloudformation.DescribeStacksResponse, error) {
 	input := cloudformation.DescribeStacksInput{
-		StackName: &info.StackName,
+		StackName: &stackName,
 	}
 
 	client := getClient()
 
 	req := client.DescribeStacksRequest(&input)
 
-	return req.Send(context.Background())
+	stack, err := req.Send(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	return stack, err
 }
 
 // DetermineIfStackExists pulls a stack via the stackName and determines if it exists. If it is in a "review in progress" state, it counts as not existing
-func DetermineIfStackExists(info data.StackInfo) (bool, error) {
-	stack, err := getStack(info)
+func DetermineIfStackExists(stackName string) (bool, error) {
+	stack, err := GetStack(stackName)
 
 	if err != nil {
 		s := err.Error()
@@ -210,7 +216,7 @@ func DeleteStack(info data.StackInfo) error {
 // GetStackEvents gets all the events from a particular CloudFormation stack
 func GetStackEvents(info data.StackInfo) cloudformation.DescribeStackEventsPaginator {
 	input := cloudformation.DescribeStackEventsInput{
-		StackName: &info.StackName,
+		StackName: &info.StackID,
 	}
 
 	client := getClient()
@@ -220,6 +226,21 @@ func GetStackEvents(info data.StackInfo) cloudformation.DescribeStackEventsPagin
 	events := cloudformation.NewDescribeStackEventsPaginator(req)
 
 	return events
+}
+
+// GetStackResources get all the resources that exist ina particular CloudFormation stack
+func GetStackResources(info data.StackInfo) cloudformation.ListStackResourcesPaginator {
+	input := cloudformation.ListStackResourcesInput{
+		StackName: &info.StackName,
+	}
+
+	client := getClient()
+
+	req := client.ListStackResourcesRequest(&input)
+
+	resources := cloudformation.NewListStackResourcesPaginator(req)
+
+	return resources
 }
 
 // VerifyAWSCredentials verifies AWS credentials are properly configured by running a List Stack command and analyzing errors for common issues with credentials

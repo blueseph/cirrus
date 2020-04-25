@@ -1,6 +1,7 @@
 package data
 
 import (
+	"context"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
@@ -137,6 +138,26 @@ func CreateDisplayRowFromEvent(event cloudformation.StackEvent) DisplayRow {
 	}
 }
 
+//ResourceMap normalizes a slice of resource summaries into a map of DisplayRows
+func ResourceMap(resources []cloudformation.StackResourceSummary) map[string]DisplayRow {
+	mapResources := make(map[string]DisplayRow)
+
+	for _, resource := range resources {
+		mapResources[*resource.LogicalResourceId] = CreateDisplayRowFromResource(resource)
+	}
+
+	return mapResources
+}
+
+//CreateDisplayRowFromResource normalizes a resource summary into a DisplayRows
+func CreateDisplayRowFromResource(resource cloudformation.StackResourceSummary) DisplayRow {
+	return DisplayRow{
+		LogicalResourceID: *resource.LogicalResourceId,
+		Action:            cloudformation.ChangeActionRemove,
+		ResourceType:      *resource.ResourceType,
+	}
+}
+
 //ActivateDisplayRows iterates through a display row map and sets the active flag to true
 func ActivateDisplayRows(displayRows map[string]DisplayRow) map[string]DisplayRow {
 	activatedDisplayRows := make(map[string]DisplayRow)
@@ -147,4 +168,15 @@ func ActivateDisplayRows(displayRows map[string]DisplayRow) map[string]DisplayRo
 	}
 
 	return activatedDisplayRows
+}
+
+//GetResourcesFromPaginator takes a ListStackResourcesPaginator and returns a list of StackResourceSummaries
+func GetResourcesFromPaginator(paginator *cloudformation.ListStackResourcesPaginator) []cloudformation.StackResourceSummary {
+	resources := make([]cloudformation.StackResourceSummary, 0)
+
+	for paginator.Next(context.TODO()) {
+		resources = append(resources, paginator.CurrentPage().StackResourceSummaries...)
+	}
+
+	return resources
 }

@@ -12,15 +12,21 @@ import (
 	"github.com/rivo/tview"
 )
 
-func declineButtonCallbackFn(app *tview.Application) func() {
+func declineButtonCallbackFn(app *tview.Application, operation cfn.StackOperation) func() {
 	return func() {
-		defer fmt.Println(colors.ERROR + "User declined change set")
+		declined := "change set"
+
+		if operation != cfn.StackOperationDelete {
+			declined = "delete"
+		}
+
+		defer fmt.Println(colors.ERROR + "User declined " + declined)
 		app.Stop()
 	}
 }
 
 // this is awful, can we make this better
-func executeButtonCallbackFn(app *tview.Application, displayBox *tview.TextView, form *tview.Form, info data.StackInfo, displayRows map[string]data.DisplayRow, fillDisplayBox func(map[string]data.DisplayRow)) func() {
+func executeButtonCallbackFn(app *tview.Application, displayBox *tview.TextView, form *tview.Form, info data.StackInfo, operation cfn.StackOperation, displayRows map[string]data.DisplayRow, fillDisplayBox func(map[string]data.DisplayRow)) func() {
 	return func() {
 		now := time.Now()
 		form.ClearButtons().SetTitle(" Errors ")
@@ -31,14 +37,21 @@ func executeButtonCallbackFn(app *tview.Application, displayBox *tview.TextView,
 		activatedDisplayRows := data.ActivateDisplayRows(displayRows)
 		fillDisplayBox(activatedDisplayRows)
 
-		err := cfn.ExecuteChangeSet(info)
-		if err != nil {
-			panic(err)
-		}
-
 		exit := func() {
 			defer fmt.Println(colors.SUCCESS + "Operation Succeeded")
 			app.Stop()
+		}
+
+		var err error
+
+		if operation == cfn.StackOperationDelete {
+			err = cfn.DeleteStack(info)
+		} else {
+			err = cfn.ExecuteChangeSet(info)
+		}
+
+		if err != nil {
+			panic(err)
 		}
 
 		go func() {
@@ -56,7 +69,6 @@ func executeButtonCallbackFn(app *tview.Application, displayBox *tview.TextView,
 								if !utils.ContainsStackStatus(data.PendingStackStatus, event.ResourceStatus) {
 									exit()
 								}
-								eventIds[*event.EventId] = true
 							} else if !eventIds[*event.EventId] {
 								activatedDisplayRows[*event.LogicalResourceId] = data.CreateDisplayRowFromEvent(event)
 								eventIds[*event.EventId] = true

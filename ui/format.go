@@ -66,23 +66,27 @@ func resourceTypeFormat(resourceType string) string {
 	return "[grey::d]" + lowered + "[-]"
 }
 
-func getTitleBar(info data.StackInfo) string {
+func getTitleBar(info data.StackInfo, operation cfn.StackOperation) string {
 	var title string
 	title += "[white]Stack:     [white::b]" + info.StackName + "\n"
-	title += "[white]Changeset: [white::b]" + info.ChangeSetName + "\n"
-	title += "[white]Id:        [white::b]" + info.StackID
+
+	if operation != cfn.StackOperationDelete {
+		title += "[white]Changeset: [white::b]" + info.ChangeSetName + "\n"
+		title += "[white]Id:        [white::b]" + info.StackID
+	}
+
 	return title
 }
 
 func parseDisplayRow(row data.DisplayRow) string {
-	if row.Source == data.DisplayRowSourceChangeSet {
-		return parseChangeRow(row)
+	if row.Source == data.DisplayRowSourceEvent {
+		return parseEventRow(row)
 	}
 
-	return parseEventRow(row)
+	return parseRow(row)
 }
 
-func parseChangeRow(row data.DisplayRow) string {
+func parseRow(row data.DisplayRow) string {
 	var formatted string
 	replacement := row.Replacement
 

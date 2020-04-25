@@ -1,8 +1,12 @@
 package cmd
 
 import (
+	"errors"
+
 	"github.com/blueseph/cirrus/cfn"
+	"github.com/blueseph/cirrus/colors"
 	"github.com/blueseph/cirrus/data"
+	"github.com/blueseph/cirrus/ui"
 	"github.com/urfave/cli/v2"
 )
 
@@ -34,24 +38,41 @@ func downAction(c *cli.Context) error {
 
 // Down manages the stack deletion lifecycle
 func Down(stackName string) error {
-	info := data.StackInfo{
-		StackName: stackName,
-	}
-
 	err := cfn.VerifyAWSCredentials()
 	if err != nil {
 		return err
 	}
 
-	err = cfn.DeleteStack(info)
+	exists, err := cfn.DetermineIfStackExists(stackName)
 	if err != nil {
 		return err
 	}
 
-	// err = displayDelete(info)
-	// if err != nil {
-	// 	return err
-	// }
+	stack, err := cfn.GetStack(stackName)
+	if err != nil {
+		return err
+	}
+
+	info := data.StackInfo{
+		StackName: stackName,
+		StackID:   *stack.DescribeStacksOutput.Stacks[0].StackId,
+	}
+
+	if !exists {
+		return errors.New(colors.ERROR + "Could not find stack " + stackName)
+	}
+
+	paginator := cfn.GetStackResources(info)
+	if err != nil {
+		return err
+	}
+
+	resources := data.GetResourcesFromPaginator(&paginator)
+
+	err = ui.DisplayDeletes(info, resources)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
