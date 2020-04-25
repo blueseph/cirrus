@@ -3,6 +3,8 @@ Cirrus is a simple CLI tool for deploying and deleting CloudFormation stacks saf
 
 _Cirrus is under development and there may be display errors. Please report any [issues](github.com/blueseph/cirrus/issues)_
 
+[![asciicast](https://asciinema.org/a/J98ZyQx1lhpV4Ok1UBksNdB1w.svg)](https://asciinema.org/a/J98ZyQx1lhpV4Ok1UBksNdB1w)
+
 ## Installation
 
 Cirrus is available for Windows, Mac, and Linux and the i386 and amd64 architectures. You'll find the binaries on the [release page](github.com/blueseph/cirrus/releases)
