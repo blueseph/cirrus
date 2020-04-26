@@ -25,61 +25,76 @@ func declineButtonCallbackFn(app *tview.Application, operation cfn.StackOperatio
 	}
 }
 
-// this is awful, can we make this better
 func executeButtonCallbackFn(app *tview.Application, displayBox *tview.TextView, form *tview.Form, info data.StackInfo, operation cfn.StackOperation, displayRows map[string]data.DisplayRow, fillDisplayBox func(map[string]data.DisplayRow)) func() {
 	return func() {
-		now := time.Now()
-		form.ClearButtons().SetTitle(" Errors ")
+		resetForm(app, displayBox, form)
 
-		app.SetFocus(displayBox)
-		app.SetInputCapture(nil)
+		activatedDisplayRows := activateRowsAndRender(displayRows, fillDisplayBox)
+		executeOperation(operation, info)
 
-		activatedDisplayRows := data.ActivateDisplayRows(displayRows)
-		fillDisplayBox(activatedDisplayRows)
+		go handleEventsLoop(app, info, activatedDisplayRows, fillDisplayBox)
+	}
+}
 
-		exit := func() {
-			defer fmt.Println(colors.SUCCESS + "Operation Succeeded")
-			app.Stop()
-		}
+func resetForm(app *tview.Application, displayBox *tview.TextView, form *tview.Form) {
+	form.ClearButtons().SetTitle(" Errors ")
 
-		var err error
+	app.SetFocus(displayBox)
+	app.SetInputCapture(nil)
+}
 
-		if operation == cfn.StackOperationDelete {
-			err = cfn.DeleteStack(info)
-		} else {
-			err = cfn.ExecuteChangeSet(info)
-		}
+func activateRowsAndRender(displayRows map[string]data.DisplayRow, fillDisplayBox func(map[string]data.DisplayRow)) map[string]data.DisplayRow {
+	activatedDisplayRows := data.ActivateDisplayRows(displayRows)
+	fillDisplayBox(activatedDisplayRows)
 
-		if err != nil {
-			panic(err)
-		}
+	return activatedDisplayRows
+}
 
-		go func() {
-			eventIds := make(map[string]bool)
+func exit(app *tview.Application) {
+	defer fmt.Println(colors.SUCCESS + "Operation Succeeded")
+	app.Stop()
+}
 
-			for {
-				paginator := cfn.GetStackEvents(info)
+func executeOperation(operation cfn.StackOperation, info data.StackInfo) {
+	var err error
 
-				for paginator.Next(context.TODO()) {
-					events := paginator.CurrentPage()
+	if operation == cfn.StackOperationDelete {
+		err = cfn.DeleteStack(info)
+	} else {
+		err = cfn.ExecuteChangeSet(info)
+	}
 
-					for _, event := range events.StackEvents {
-						if event.Timestamp.After(now) {
-							if *event.ResourceType == data.CloudformationStackResource {
-								if !utils.ContainsStackStatus(data.PendingStackStatus, event.ResourceStatus) {
-									exit()
-								}
-							} else if !eventIds[*event.EventId] {
-								activatedDisplayRows[*event.LogicalResourceId] = data.CreateDisplayRowFromEvent(event)
-								eventIds[*event.EventId] = true
-							}
+	if err != nil {
+		panic(err)
+	}
+}
+
+func handleEventsLoop(app *tview.Application, info data.StackInfo, activatedDisplayRows map[string]data.DisplayRow, fillDisplayBox func(map[string]data.DisplayRow)) {
+	now := time.Now()
+
+	eventIds := make(map[string]bool)
+
+	for {
+		paginator := cfn.GetStackEvents(info)
+
+		for paginator.Next(context.TODO()) {
+			events := paginator.CurrentPage()
+
+			for _, event := range events.StackEvents {
+				if event.Timestamp.After(now) {
+					if *event.ResourceType == data.CloudformationStackResource {
+						if !utils.ContainsStackStatus(data.PendingStackStatus, event.ResourceStatus) {
+							exit(app)
 						}
+					} else if !eventIds[*event.EventId] {
+						activatedDisplayRows[*event.LogicalResourceId] = data.CreateDisplayRowFromEvent(event)
+						eventIds[*event.EventId] = true
 					}
 				}
-
-				fillDisplayBox(activatedDisplayRows)
-				time.Sleep(500 * time.Millisecond)
 			}
-		}()
+		}
+
+		fillDisplayBox(activatedDisplayRows)
+		time.Sleep(500 * time.Millisecond)
 	}
 }
