@@ -34,7 +34,7 @@ func DisplayDeletes(info data.StackInfo, resources []cloudformation.StackResourc
 }
 
 func createTitleBar(info data.StackInfo, operation cfn.StackOperation) *tview.TextView {
-	textView := tview.NewTextView().SetScrollable(false).SetDynamicColors(true).SetWrap(true)
+	textView := tview.NewTextView().SetScrollable(false).SetDynamicColors(true).SetWrap(false)
 
 	fmt.Fprintf(textView, "%s ", getTitleBar(info, operation))
 
@@ -72,6 +72,14 @@ func createActionBar(app *tview.Application, displayBox *tview.TextView, info da
 	return form
 }
 
+func addErrorBar(form *tview.Form) {
+	errorBar := tview.NewInputField().
+		SetLabel("Operation failed. View failure log after rollback completes").
+		SetFieldWidth(-1)
+
+	form.AddFormItem(errorBar)
+}
+
 func showScreen(displayRows map[string]data.DisplayRow, operation cfn.StackOperation, info data.StackInfo) error {
 	app := tview.NewApplication()
 
@@ -82,14 +90,12 @@ func showScreen(displayRows map[string]data.DisplayRow, operation cfn.StackOpera
 	actionBar := createActionBar(app, displayBox, info, operation, displayRows, fillDisplayBox)
 
 	fillDisplayBox(displayRows)
-	// liveBar := createLiveBar
 
 	view := tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(titleBar, 5, 0, false).
 		AddItem(displayBox, 0, 3, false).
 		AddItem(actionBar, 5, 0, false)
 
-	// y u ck
 	viewSetInputCapture := viewInputCaptureFn(app, actionBar, displayBox)
 	view.SetInputCapture(viewSetInputCapture)
 

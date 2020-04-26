@@ -69,7 +69,7 @@ func resourceTypeFormat(resourceType string) string {
 func getTitleBar(info data.StackInfo, operation cfn.StackOperation) string {
 	var title string
 	title += "[white]Stack:     [white::b]" + info.StackName + "\n"
-	title += "[white]Id:        [white::b]" + info.StackID
+	title += "[white]Id:        [white::b]" + info.StackID + "\n"
 
 	if operation != cfn.StackOperationDelete {
 		title += "[white]Changeset: [white::b]" + info.ChangeSetName + "\n"

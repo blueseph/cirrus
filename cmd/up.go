@@ -33,6 +33,11 @@ var upFlags = []cli.Flag{
 		Aliases: []string{"sl"},
 		Usage:   "Skips linting (not recommended)",
 	},
+	&cli.BoolFlag{
+		Name:    "overwrite",
+		Aliases: []string{"o"},
+		Usage:   "Overwrites existing empty (0 resource) stacks before updating",
+	},
 }
 
 // UpCommand returns the CLI construct that uploads a template to CloudFormation and watches the response
@@ -49,7 +54,10 @@ func upAction(c *cli.Context) error {
 		return err
 	}
 
-	err = Up(c.String("stack"), template)
+	stack := c.String("stack")
+	overwrite := c.Bool("overwrite")
+
+	err = Up(stack, overwrite, template)
 	if err != nil {
 		return err
 	}
@@ -58,7 +66,7 @@ func upAction(c *cli.Context) error {
 }
 
 // Up kicks off the stack creation lifecycle, creating a change set, confirming the change set, and tailing the events.
-func Up(stackName string, template []byte) error {
+func Up(stackName string, overwrite bool, template []byte) error {
 	changeSetName := stackName + "-" + fmt.Sprint(time.Now().Unix())
 
 	info := data.StackInfo{
@@ -79,21 +87,9 @@ func Up(stackName string, template []byte) error {
 	empty := cfn.DetermineIfStackIsEmpty(info)
 
 	if exists && empty {
-		confirm, err := askYesNoQuestion(colors.STATUS + "Empty stack detected. Overwrite? [Y/N]")
+		err := handleOverwrite(overwrite, exists, info)
 		if err != nil {
 			return err
-		}
-
-		if confirm {
-			fmt.Println(colors.STATUS + "Deleting stack...")
-			err := cfn.DeleteStackAndWait(info)
-			exists = false
-			if err != nil {
-				return err
-			}
-		} else {
-			fmt.Println(colors.ERROR + "User declined empty stack deletion.")
-			return nil
 		}
 	}
 
@@ -139,4 +135,30 @@ func askYesNoQuestion(question string) (bool, error) {
 			fmt.Println("Please enter Y/N")
 		}
 	}
+}
+
+func handleOverwrite(overwrite bool, exists bool, info data.StackInfo) error {
+	var err error
+	confirm := overwrite
+
+	if !confirm {
+		confirm, err = askYesNoQuestion(colors.STATUS + "Empty stack detected. Overwrite? [Y/N]")
+		if err != nil {
+			return err
+		}
+	}
+
+	if confirm {
+		fmt.Println(colors.STATUS + "Deleting stack...")
+		err := cfn.DeleteStackAndWait(info)
+		exists = false
+		if err != nil {
+			return err
+		}
+	} else {
+		fmt.Println(colors.ERROR + "User declined empty stack deletion.")
+		return nil
+	}
+
+	return nil
 }

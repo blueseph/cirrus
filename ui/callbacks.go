@@ -33,7 +33,7 @@ func executeButtonCallbackFn(app *tview.Application, displayBox *tview.TextView,
 		activatedDisplayRows := activateRowsAndRender(displayRows, fillDisplayBox)
 		executeOperation(operation, info)
 
-		go handleEventsLoop(app, info, activatedDisplayRows, fillDisplayBox)
+		go handleEventsLoop(app, form, info, activatedDisplayRows, fillDisplayBox)
 	}
 }
 
@@ -84,7 +84,7 @@ func executeOperation(operation cfn.StackOperation, info data.StackInfo) {
 	}
 }
 
-func handleEventsLoop(app *tview.Application, info data.StackInfo, activatedDisplayRows map[string]data.DisplayRow, fillDisplayBox func(map[string]data.DisplayRow)) {
+func handleEventsLoop(app *tview.Application, form *tview.Form, info data.StackInfo, activatedDisplayRows map[string]data.DisplayRow, fillDisplayBox func(map[string]data.DisplayRow)) {
 	now := time.Now()
 
 	eventIds := make(map[string]bool)
@@ -99,6 +99,10 @@ func handleEventsLoop(app *tview.Application, info data.StackInfo, activatedDisp
 			for _, event := range events.StackEvents {
 				if event.Timestamp.After(now) {
 					if *event.ResourceType == data.CloudformationStackResource {
+						if utils.ContainsStackStatus(data.RollbackStackStatus, event.ResourceStatus) {
+							addErrorBar(form)
+						}
+
 						if !utils.ContainsStackStatus(data.PendingStackStatus, event.ResourceStatus) {
 							if len(errors) > 0 {
 								fail(app, errors)

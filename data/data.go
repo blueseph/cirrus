@@ -91,6 +91,11 @@ var (
 		cloudformation.StackStatusUpdateCompleteCleanupInProgress,
 		cloudformation.StackStatusUpdateRollbackCompleteCleanupInProgress,
 	}
+
+	//RollbackStackStatus status indicates a stack is rolling back.
+	RollbackStackStatus []cloudformation.StackStatus = []cloudformation.StackStatus{
+		cloudformation.StackStatusRollbackInProgress,
+	}
 )
 
 // ChangeMap normalizes a slice of changes into a map of DisplayRows
