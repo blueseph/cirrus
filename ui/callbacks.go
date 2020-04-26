@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/blueseph/cirrus/cfn"
 	"github.com/blueseph/cirrus/colors"
 	"github.com/blueseph/cirrus/data"
@@ -50,8 +51,22 @@ func activateRowsAndRender(displayRows map[string]data.DisplayRow, fillDisplayBo
 	return activatedDisplayRows
 }
 
-func exit(app *tview.Application) {
+func succeed(app *tview.Application) {
 	defer fmt.Println(colors.SUCCESS + "Operation Succeeded")
+	app.Stop()
+}
+
+func fail(app *tview.Application, errors []cloudformation.StackEvent) {
+	errorMsg := colors.ERROR + "Operation failed. The following errors prevented the stack from deploying successfully: \n\n"
+
+	for i, err := range errors {
+		errorMsg += colors.Magenta(*err.LogicalResourceId) + " - " + string(*err.ResourceStatusReason)
+		if i < len(errors)-1 {
+			errorMsg += "\n"
+		}
+	}
+
+	defer fmt.Println(errorMsg)
 	app.Stop()
 }
 
@@ -73,6 +88,7 @@ func handleEventsLoop(app *tview.Application, info data.StackInfo, activatedDisp
 	now := time.Now()
 
 	eventIds := make(map[string]bool)
+	errors := make([]cloudformation.StackEvent, 0)
 
 	for {
 		paginator := cfn.GetStackEvents(info)
@@ -84,10 +100,19 @@ func handleEventsLoop(app *tview.Application, info data.StackInfo, activatedDisp
 				if event.Timestamp.After(now) {
 					if *event.ResourceType == data.CloudformationStackResource {
 						if !utils.ContainsStackStatus(data.PendingStackStatus, event.ResourceStatus) {
-							exit(app)
+							if len(errors) > 0 {
+								fail(app, errors)
+							} else {
+								succeed(app)
+							}
 						}
 					} else if !eventIds[*event.EventId] {
 						activatedDisplayRows[*event.LogicalResourceId] = data.CreateDisplayRowFromEvent(event)
+
+						if utils.ContainsResourceStatus(data.NegativeEventStatus, event.ResourceStatus) {
+							errors = append(errors, event)
+						}
+
 						eventIds[*event.EventId] = true
 					}
 				}

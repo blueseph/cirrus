@@ -195,6 +195,25 @@ func DetermineIfStackExists(stackName string) (bool, error) {
 	return exists, nil
 }
 
+//DetermineIfStackIsEmpty runs through a given stack's resources. If all resources are deleted, the stack is empty and should be deleted.
+func DetermineIfStackIsEmpty(info data.StackInfo) bool {
+	empty := true
+
+	paginator := GetStackResources(info)
+
+	for paginator.Next(context.TODO()) {
+		page := paginator.CurrentPage()
+
+		for _, resource := range page.StackResourceSummaries {
+			if resource.ResourceStatus != cloudformation.ResourceStatusDeleteComplete {
+				empty = false
+			}
+		}
+	}
+
+	return empty
+}
+
 // DeleteStack deletes the stack given a stack name
 func DeleteStack(info data.StackInfo) error {
 	input := cloudformation.DeleteStackInput{
@@ -206,6 +225,37 @@ func DeleteStack(info data.StackInfo) error {
 	req := client.DeleteStackRequest(&input)
 
 	_, err := req.Send(context.Background())
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// DeleteStackAndWait deletes the stack and waits for a delete complete signal
+func DeleteStackAndWait(info data.StackInfo) error {
+	err := DeleteStack(info)
+	if err != nil {
+		return err
+	}
+
+	err = waitForDeleteStack(info)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func waitForDeleteStack(info data.StackInfo) error {
+	client := getClient()
+
+	input := cloudformation.DescribeStacksInput{
+		StackName: &info.StackName,
+	}
+
+	err := client.WaitUntilStackDeleteComplete(context.Background(), &input)
+
 	if err != nil {
 		return err
 	}

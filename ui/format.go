@@ -44,15 +44,15 @@ func colorizeAction(change cloudformation.ChangeAction, ascii bool) string {
 	return color + strings.ToUpper(string(change)) + end
 }
 
-func colorizeStatus(status cloudformation.ResourceStatus) string {
+func colorizeResourceStatus(status cloudformation.ResourceStatus) string {
 	color := "[green::b]"
 	end := "[-]"
 
-	if utils.ContainsStatus(data.PendingEventStatus, status) {
+	if utils.ContainsResourceStatus(data.PendingEventStatus, status) {
 		color = "[yellow::b]"
 	}
 
-	if utils.ContainsStatus(data.NegativeEventStatus, status) {
+	if utils.ContainsResourceStatus(data.NegativeEventStatus, status) {
 		color = "[red::b]"
 	}
 
@@ -69,10 +69,10 @@ func resourceTypeFormat(resourceType string) string {
 func getTitleBar(info data.StackInfo, operation cfn.StackOperation) string {
 	var title string
 	title += "[white]Stack:     [white::b]" + info.StackName + "\n"
+	title += "[white]Id:        [white::b]" + info.StackID
 
 	if operation != cfn.StackOperationDelete {
 		title += "[white]Changeset: [white::b]" + info.ChangeSetName + "\n"
-		title += "[white]Id:        [white::b]" + info.StackID
 	}
 
 	return title
@@ -118,7 +118,7 @@ func parseRow(row data.DisplayRow) string {
 func parseEventRow(row data.DisplayRow) string {
 	var formatted string
 
-	formatted += "[" + colorizeStatus(row.Status) + "]"
+	formatted += "[" + colorizeResourceStatus(row.Status) + "]"
 	formatted += "[#00b8ea]" + row.LogicalResourceID + " [white]"
 	formatted += resourceTypeFormat(row.ResourceType)
 

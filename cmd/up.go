@@ -1,9 +1,12 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"time"
+	"unicode"
 
 	"github.com/blueseph/cirrus/cfn"
 	"github.com/blueseph/cirrus/colors"
@@ -73,6 +76,27 @@ func Up(stackName string, template []byte) error {
 		return err
 	}
 
+	empty := cfn.DetermineIfStackIsEmpty(info)
+
+	if exists && empty {
+		confirm, err := askYesNoQuestion(colors.STATUS + "Empty stack detected. Overwrite? [Y/N]")
+		if err != nil {
+			return err
+		}
+
+		if confirm {
+			fmt.Println(colors.STATUS + "Deleting stack...")
+			err := cfn.DeleteStackAndWait(info)
+			exists = false
+			if err != nil {
+				return err
+			}
+		} else {
+			fmt.Println(colors.ERROR + "User declined empty stack deletion.")
+			return nil
+		}
+	}
+
 	fmt.Println(colors.STATUS + "Creating change set...")
 	changeSet, err := cfn.CreateChanges(info, template, exists)
 	if err != nil {
@@ -89,4 +113,30 @@ func Up(stackName string, template []byte) error {
 	err = ui.DisplayChanges(info, changeSet, operation)
 
 	return err
+
+}
+
+func askYesNoQuestion(question string) (bool, error) {
+	reader := bufio.NewReader(os.Stdin)
+
+	fmt.Println(question)
+
+	for {
+		char, _, err := reader.ReadRune()
+
+		if err != nil {
+			return false, err
+		}
+
+		char = unicode.ToLower(char)
+
+		switch char {
+		case 'y':
+			return true, nil
+		case 'n':
+			return false, nil
+		default:
+			fmt.Println("Please enter Y/N")
+		}
+	}
 }
