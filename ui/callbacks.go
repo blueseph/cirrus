@@ -96,7 +96,7 @@ func handleEventsLoop(app *tview.Application, form *tview.Form, info data.StackI
 		for paginator.Next(context.TODO()) {
 			events := paginator.CurrentPage()
 
-			for _, event := range events.StackEvents {
+			for _, event := range utils.ReverseEvents(events.StackEvents) {
 				if event.Timestamp.After(now) {
 					if *event.ResourceType == data.CloudformationStackResource {
 						if utils.ContainsStackStatus(data.RollbackStackStatus, event.ResourceStatus) {
