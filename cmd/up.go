@@ -81,6 +81,7 @@ func upAction(c *cli.Context) error {
 
 	err = Up(stack, overwrite, template, tags, parameters)
 	if err != nil {
+		fmt.Println(colors.Error("Cirrus encountered a fatal error:"))
 		return err
 	}
 

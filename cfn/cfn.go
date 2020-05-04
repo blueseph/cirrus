@@ -116,6 +116,14 @@ func waitForChangeSet(info data.StackInfo) error {
 	err := client.WaitUntilChangeSetCreateComplete(context.Background(), &input)
 
 	if err != nil {
+		changeSet, innerErr := describeChangeSet(info)
+		if innerErr != nil {
+			return innerErr
+		}
+
+		if changeSet.Status == cloudformation.ChangeSetStatusFailed {
+			return errors.New(*changeSet.StatusReason)
+		}
 		return err
 	}
 

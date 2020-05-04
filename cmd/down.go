@@ -31,6 +31,7 @@ var DownCommand = &cli.Command{
 func downAction(c *cli.Context) error {
 	err := Down(c.String("stack"))
 	if err != nil {
+		fmt.Println(colors.Error("Cirrus encountered a fatal error:"))
 		return err
 	}
 
@@ -49,6 +50,10 @@ func Down(stackName string) error {
 		return err
 	}
 
+	if !exists {
+		return errors.New(colors.Error(fmt.Sprintf("Could not find stack %s", stackName)))
+	}
+
 	stack, err := cfn.GetStack(stackName)
 	if err != nil {
 		return err
@@ -57,10 +62,6 @@ func Down(stackName string) error {
 	info := data.StackInfo{
 		StackName: stackName,
 		StackID:   *stack.DescribeStacksOutput.Stacks[0].StackId,
-	}
-
-	if !exists {
-		return errors.New(colors.Error(fmt.Sprintf("Could not find stack %s", stackName)))
 	}
 
 	paginator := cfn.GetStackResources(info)
