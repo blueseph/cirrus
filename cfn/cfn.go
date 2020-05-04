@@ -3,6 +3,7 @@ package cfn
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws/external"
@@ -43,7 +44,7 @@ func getClient() *cloudformation.Client {
 	if cfnClient == nil {
 		cfg, err := external.LoadDefaultAWSConfig()
 		if err != nil {
-			panic(colors.ERROR + "unable to load SDK config, " + err.Error())
+			panic(colors.Error(fmt.Sprintf("unable to load SDK config, %s", err.Error())))
 		}
 
 		cfnClient = cloudformation.New(cfg)
@@ -318,7 +319,8 @@ func handleCredentialsError(err error) error {
 	var msg string
 
 	if strings.Contains(strErr, unknownEndpoint) {
-		msg = colors.ERROR + "Unable to verify AWS credentials. Ensure your configuration is correct. \n \n" + colors.DOCS + "https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html"
+		msg = colors.Error("Unable to verify AWS credentials. Ensure your configuration is correct. \n")
+		msg += colors.Docs("https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html")
 	}
 
 	return errors.New(msg)

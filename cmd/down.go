@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/blueseph/cirrus/cfn"
 	"github.com/blueseph/cirrus/colors"
@@ -59,7 +60,7 @@ func Down(stackName string) error {
 	}
 
 	if !exists {
-		return errors.New(colors.ERROR + "Could not find stack " + stackName)
+		return errors.New(colors.Error(fmt.Sprintf("Could not find stack %s", stackName)))
 	}
 
 	paginator := cfn.GetStackResources(info)

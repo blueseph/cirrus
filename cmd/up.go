@@ -115,7 +115,7 @@ func Up(stackName string, overwrite bool, template []byte, tags []cloudformation
 		}
 	}
 
-	fmt.Println(colors.STATUS + "Creating change set...")
+	fmt.Println(colors.Status("Creating change set..."))
 	changeSet, err := cfn.CreateChanges(info, template, tags, parameters, exists)
 	if err != nil {
 		return err
@@ -164,21 +164,21 @@ func handleOverwrite(overwrite bool, exists bool, info data.StackInfo) error {
 	confirm := overwrite
 
 	if !confirm {
-		confirm, err = askYesNoQuestion(colors.STATUS + "Empty stack detected. Overwrite? [Y/N]")
+		confirm, err = askYesNoQuestion(colors.Status("Empty stack detected. Overwrite? [Y/N]"))
 		if err != nil {
 			return err
 		}
 	}
 
 	if confirm {
-		fmt.Println(colors.STATUS + "Deleting stack...")
+		fmt.Println(colors.Status("Deleting stack..."))
 		err := cfn.DeleteStackAndWait(info)
 		exists = false
 		if err != nil {
 			return err
 		}
 	} else {
-		fmt.Println(colors.ERROR + "User declined empty stack deletion.")
+		fmt.Println(colors.Status("User declined empty stack deletion. Terminating"))
 		return nil
 	}
 

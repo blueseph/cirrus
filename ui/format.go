@@ -91,7 +91,7 @@ func parseRow(row data.DisplayRow) string {
 	replacement := row.Replacement
 
 	if row.Active {
-		formatted += "[[grey]PENDING_" + strings.ToUpper(string(row.Action)) + "[-]]"
+		formatted += "[[grey]PENDING_" + strings.ToUpper(string(row.Action)) + "[-]] "
 	} else {
 		formatted += "[" + colorizeAction(row.Action, true) + "] "
 	}

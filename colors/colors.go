@@ -21,16 +21,16 @@ var (
 	White = color("\033[1;37m%s\033[0m")
 
 	//ERROR prints a stylized error prefix
-	ERROR = White("[") + Red("ERROR") + White("]") + " "
+	ERROR = White("[") + Red("ERROR") + White("]")
 
 	//DOCS prints a stylized doc prefix
-	DOCS = White("[") + Magenta("DOCS") + White("]") + " "
+	DOCS = White("[") + Magenta("DOCS") + White("]")
 
 	//STATUS prints a stylized status prefix
-	STATUS = White("[") + Teal("STATUS") + White("]") + " "
+	STATUS = White("[") + Teal("STATUS") + White("]")
 
 	//SUCCESS prints a stylized status prefix
-	SUCCESS = White("[") + Green("SUCCESS") + White("]") + " "
+	SUCCESS = White("[") + Green("SUCCESS") + White("]")
 
 	//Error returns a formatted message with a stylized error prefix
 	Error = formatMessage(ERROR)

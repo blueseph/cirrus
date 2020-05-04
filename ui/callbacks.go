@@ -17,11 +17,11 @@ func declineButtonCallbackFn(app *tview.Application, operation cfn.StackOperatio
 	return func() {
 		declined := "change set"
 
-		if operation != cfn.StackOperationDelete {
+		if operation == cfn.StackOperationDelete {
 			declined = "delete"
 		}
 
-		defer fmt.Println(colors.ERROR + "User declined " + declined)
+		defer fmt.Println(colors.Status(fmt.Sprintf("User declined %s", declined)))
 		app.Stop()
 	}
 }
@@ -52,12 +52,12 @@ func activateRowsAndRender(displayRows map[string]data.DisplayRow, fillDisplayBo
 }
 
 func succeed(app *tview.Application) {
-	defer fmt.Println(colors.SUCCESS + "Operation Succeeded")
+	defer fmt.Println(colors.Success("Operation Succeeded"))
 	app.Stop()
 }
 
 func fail(app *tview.Application, errors []cloudformation.StackEvent) {
-	errorMsg := colors.ERROR + "Operation failed. The following errors prevented the stack from deploying successfully: \n\n"
+	errorMsg := colors.Error("Operation failed. The following errors prevented the stack from deploying successfully: \n\n")
 
 	for i, err := range errors {
 		errorMsg += colors.Magenta(*err.LogicalResourceId) + " - " + string(*err.ResourceStatusReason)
