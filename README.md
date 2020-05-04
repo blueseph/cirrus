@@ -1,9 +1,9 @@
 # Cirrus
 Cirrus is a simple CLI tool to easily handle deploying and deleting CloudFormation stacks. Cirrus is primarily meant to be used while developing templates.
 
-_Cirrus is under development and there may be display errors. Please report any [issues](https://github.com/blueseph/cirrus/issues)_
+_Cirrus is under development. There will be be display errors and not all features listed in the readme are currently available. Please report any [issues](https://github.com/blueseph/cirrus/issues)_
 
-[![asciicast](https://asciinema.org/a/J98ZyQx1lhpV4Ok1UBksNdB1w.svg)](https://asciinema.org/a/J98ZyQx1lhpV4Ok1UBksNdB1w)
+![cirrus demo gif](./cirrus.gif)
 
 ## Installation
 
