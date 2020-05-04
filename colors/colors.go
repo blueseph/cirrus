@@ -31,6 +31,18 @@ var (
 
 	//SUCCESS prints a stylized status prefix
 	SUCCESS = White("[") + Green("SUCCESS") + White("]") + " "
+
+	//Error returns a formatted message with a stylized error prefix
+	Error = formatMessage(ERROR)
+
+	//Docs returns a formatted message with a stylized docs prefix
+	Docs = formatMessage(DOCS)
+
+	//Status returns a formatted message with a stylized "status" prefix
+	Status = formatMessage(STATUS)
+
+	//Success returns a formatted message with a stylized success prefix
+	Success = formatMessage(SUCCESS)
 )
 
 func color(colorString string) func(...interface{}) string {
@@ -39,4 +51,10 @@ func color(colorString string) func(...interface{}) string {
 			fmt.Sprint(args...))
 	}
 	return sprint
+}
+
+func formatMessage(formatted string) func(string) string {
+	return func(message string) string {
+		return fmt.Sprintf("%s %s", formatted, message)
+	}
 }

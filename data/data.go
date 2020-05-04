@@ -2,9 +2,14 @@ package data
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
+	"github.com/blueseph/cirrus/colors"
 )
 
 //DisplayRow is a normalized data structure to store change/event data to display
@@ -184,4 +189,44 @@ func GetResourcesFromPaginator(paginator *cloudformation.ListStackResourcesPagin
 	}
 
 	return resources
+}
+
+// GetTags gets the tags from the location provided. If tags don't exist, return an empty tag slice
+func GetTags(location string) ([]cloudformation.Tag, error) {
+	invalidJSON := "Unable to load tags. tags must be valid JSON and only of type string"
+	docsMessage := "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-resource-tags.html"
+	errorMessage := fmt.Sprintf("%s \n %s", colors.Error(invalidJSON), colors.Docs(docsMessage))
+
+	container := make([]cloudformation.Tag, 0)
+
+	tags, err := ioutil.ReadFile(location)
+	if err != nil {
+		return container, nil
+	}
+
+	if err := json.Unmarshal(tags, &container); err != nil {
+		return nil, errors.New(errorMessage)
+	}
+
+	return container, nil
+}
+
+// GetParameters gets the tags from the location provided. If tags don't exist, return an empty tag slice
+func GetParameters(location string) ([]cloudformation.Parameter, error) {
+	invalidJSON := "Unable to load parameters. Parameters must be valid JSON and only of type string"
+	docsMessage := "https://aws.amazon.com/blogs/devops/passing-parameters-to-cloudformation-stacks-with-the-aws-cli-and-powershell/"
+	errorMessage := fmt.Sprintf("%s \n %s", colors.Error(invalidJSON), colors.Docs(docsMessage))
+
+	container := make([]cloudformation.Parameter, 0)
+
+	parameters, err := ioutil.ReadFile(location)
+	if err != nil {
+		return container, nil
+	}
+
+	if err := json.Unmarshal(parameters, &container); err != nil {
+		return nil, errors.New(errorMessage)
+	}
+
+	return container, nil
 }

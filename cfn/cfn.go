@@ -18,7 +18,7 @@ var (
 	ChangeSetASCII map[cloudformation.ChangeAction]string = map[cloudformation.ChangeAction]string{
 		cloudformation.ChangeActionAdd:    "+",
 		cloudformation.ChangeActionRemove: "-",
-		cloudformation.ChangeActionModify: "↻",
+		cloudformation.ChangeActionModify: "↻ ",
 	}
 )
 
@@ -53,8 +53,8 @@ func getClient() *cloudformation.Client {
 }
 
 //CreateChanges creates a change set, waits for it to complete creating, then describes the change set.
-func CreateChanges(info data.StackInfo, template []byte, exists bool) (*cloudformation.DescribeChangeSetResponse, error) {
-	err := createChangeSet(info, template, exists)
+func CreateChanges(info data.StackInfo, template []byte, tags []cloudformation.Tag, parameters []cloudformation.Parameter, exists bool) (*cloudformation.DescribeChangeSetResponse, error) {
+	err := createChangeSet(info, template, tags, parameters, exists)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +69,7 @@ func CreateChanges(info data.StackInfo, template []byte, exists bool) (*cloudfor
 	return changes, err
 }
 
-func createChangeSet(info data.StackInfo, template []byte, exists bool) error {
+func createChangeSet(info data.StackInfo, template []byte, tags []cloudformation.Tag, parameters []cloudformation.Parameter, exists bool) error {
 	stringTemplate := string(template)
 	capabilities := []cloudformation.Capability{
 		cloudformation.CapabilityCapabilityAutoExpand,
@@ -90,6 +90,8 @@ func createChangeSet(info data.StackInfo, template []byte, exists bool) error {
 		TemplateBody:  &stringTemplate,
 		ChangeSetType: changeSetType,
 		Capabilities:  capabilities,
+		Parameters:    parameters,
+		Tags:          tags,
 	}
 
 	req := client.CreateChangeSetRequest(&input)

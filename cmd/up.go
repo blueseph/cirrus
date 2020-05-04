@@ -8,6 +8,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/aws/aws-sdk-go-v2/service/cloudformation"
 	"github.com/blueseph/cirrus/cfn"
 	"github.com/blueseph/cirrus/colors"
 	"github.com/blueseph/cirrus/data"
@@ -21,6 +22,17 @@ var upFlags = []cli.Flag{
 		Aliases: []string{"t"},
 		Value:   "./template.yaml",
 		Usage:   "Specifies location of template `file`",
+	},
+	&cli.StringFlag{
+		Name:    "parameters",
+		Aliases: []string{"p"},
+		Value:   "./parameters.json",
+		Usage:   "Specifies location of parameters `file`",
+	},
+	&cli.StringFlag{
+		Name:  "tags",
+		Value: "./tags.json",
+		Usage: "Specifies location of tags `file`",
 	},
 	&cli.StringFlag{
 		Name:     "stack",
@@ -54,10 +66,20 @@ func upAction(c *cli.Context) error {
 		return err
 	}
 
+	tags, err := data.GetTags(c.String("tags"))
+	if err != nil {
+		return err
+	}
+
+	parameters, err := data.GetParameters(c.String("parameters"))
+	if err != nil {
+		return err
+	}
+
 	stack := c.String("stack")
 	overwrite := c.Bool("overwrite")
 
-	err = Up(stack, overwrite, template)
+	err = Up(stack, overwrite, template, tags, parameters)
 	if err != nil {
 		return err
 	}
@@ -66,7 +88,7 @@ func upAction(c *cli.Context) error {
 }
 
 // Up kicks off the stack creation lifecycle, creating a change set, confirming the change set, and tailing the events.
-func Up(stackName string, overwrite bool, template []byte) error {
+func Up(stackName string, overwrite bool, template []byte, tags []cloudformation.Tag, parameters []cloudformation.Parameter) error {
 	changeSetName := stackName + "-" + fmt.Sprint(time.Now().Unix())
 
 	info := data.StackInfo{
@@ -94,7 +116,7 @@ func Up(stackName string, overwrite bool, template []byte) error {
 	}
 
 	fmt.Println(colors.STATUS + "Creating change set...")
-	changeSet, err := cfn.CreateChanges(info, template, exists)
+	changeSet, err := cfn.CreateChanges(info, template, tags, parameters, exists)
 	if err != nil {
 		return err
 	}
