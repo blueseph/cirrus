@@ -23,7 +23,7 @@ Cirrus will follow CloudFormation best practices such as creating a change set b
 
 A best effort has been made to apply sensible deployment defaults, such as assuming a template.yaml or template.json file in the directory as the intended template, and a parameters.json file as the intended parameters file.
 
-Some CloudFormation options have been disabled as a way of promoting best practices. Ad-hoc parameters are tags are not supported. The only supported options are having a parameters.json and/or a tags.json file. These are config files that can be sourced and vetted -- ad-hoc parameters/tags cannot.
+Some CloudFormation options have been disabled as a way of promoting best practices. Ad-hoc parameters and tags are not supported. The only supported options are having a parameters.json and/or a tags.json file. These are config files that can be sourced and vetted -- ad-hoc parameters/tags cannot.
 
 ## Commands
 
