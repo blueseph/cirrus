@@ -45,6 +45,16 @@ cirrus down
 
 We'd love your help! See [CONTRIBUTING](CONTRIBUTING.md) on how to help
 
+## FAQ
+
+#### Cirrus doesn't work with AWS SSO Credentials. How can I fix this?
+
+The current AWS SDK doesn't check for AWS SSO credentials. You can remedy this by using the [aws2-wrap](https://github.com/linaro-its/aws2-wrap) library. 
+
+```
+aws2-wrap --profile [MYPROFILE] --exec "cirrus up --stack cirrus"
+```
+
 ## License
 
 Cirrus is released under the MIT License.
