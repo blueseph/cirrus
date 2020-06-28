@@ -131,6 +131,13 @@ func Up(stackName string, overwrite bool, template []byte, tags []cloudformation
 
 	err = ui.DisplayChanges(info, changeSet, operation)
 
+	if err == nil {
+		fmt.Println("\nStack Info")
+		fmt.Println("----------")
+		fmt.Printf("Stack Name: %s\n", info.StackName)
+		fmt.Printf("Stack ID: %s\n", info.StackID)
+	}
+
 	return err
 
 }
