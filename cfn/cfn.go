@@ -323,10 +323,9 @@ func VerifyAWSCredentials() error {
 }
 
 func handleCredentialsError(err error) error {
-	strErr := err.Error()
-	var msg string
+	msg := err.Error()
 
-	if strings.Contains(strErr, unknownEndpoint) {
+	if strings.Contains(msg, unknownEndpoint) {
 		msg = colors.Error("Unable to verify AWS credentials. Ensure your configuration is correct. \n")
 		msg += colors.Docs("https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html")
 	}
